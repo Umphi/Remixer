@@ -8,3 +8,5 @@ AppIcon.png
 !icons/internal
 !icons/internal/AppIcon.png
 README.target.md
+modules/__pycache__/*
+core/__pycache__/*
