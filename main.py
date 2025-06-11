@@ -147,7 +147,7 @@ class DrawingWindow(QMainWindow):
         if not self.menu_visible:
             return
 
-        theme = self.selected_theme
+        theme = self.theme
 
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
@@ -242,8 +242,8 @@ class DrawingWindow(QMainWindow):
         span_angle = angle * 16
 
         is_focused = i == self.focused_index
-        brush_color = self.selected_theme.sector.fill.to_QColor(self.opacity_multiplier)
-        pen_color = self.selected_theme.sector.outline.to_QColor(self.opacity_multiplier)
+        brush_color = self.theme.sector.fill.to_QColor(self.opacity_multiplier)
+        pen_color = self.theme.sector.outline.to_QColor(self.opacity_multiplier)
 
         painter.setPen(pen_color)
         painter.setBrush(brush_color)
@@ -259,7 +259,7 @@ class DrawingWindow(QMainWindow):
 
         if is_focused:
             if isinstance(label, Theme):
-                self.selected_theme = label
+                self.theme = label
 
     def draw_focus(self, painter, center, radius, sectors, f_angle, speed = 0):
         """
@@ -280,10 +280,10 @@ class DrawingWindow(QMainWindow):
         span_angle = angle * 16
         start_angle = f_angle*16 - 0.5*self.focus_pie_span
 
-        brush_color = self.selected_theme.focused_sector.fill.to_QColor(self.opacity_multiplier)
-        pen_color = self.selected_theme.focused_sector.outline.to_QColor(self.opacity_multiplier)
+        brush_color = self.theme.focused_sector.fill.to_QColor(self.opacity_multiplier)
+        pen_color = self.theme.focused_sector.outline.to_QColor(self.opacity_multiplier)
         if speed > 2:
-            pen_color = self.selected_theme.focused_sector.fill.to_QColor(self.opacity_multiplier)
+            pen_color = self.theme.focused_sector.fill.to_QColor(self.opacity_multiplier)
 
         painter.setPen(pen_color)
         painter.setBrush(brush_color)
@@ -325,15 +325,15 @@ class DrawingWindow(QMainWindow):
         current_angle = i * 360 / sectors - 90 + (360 / sectors) / 2
         focused_angle = self.focus_pie_angle
 
-        max_icon_multiplier = self.selected_theme.icons.max_scaling
-        min_icon_multiplier = self.selected_theme.icons.min_scaling
+        max_icon_multiplier = self.theme.icons.max_scaling
+        min_icon_multiplier = self.theme.icons.min_scaling
 
         focus_angle_1 = (focused_angle-current_angle)%360
         if focus_angle_1 > 180:
             focus_angle_1 = 360 - focus_angle_1
 
         max_to_min_mtp_diff = max_icon_multiplier-min_icon_multiplier
-        scaling_mtp = min((focus_angle_1/self.selected_theme.icons.scaling_angle),1)
+        scaling_mtp = min((focus_angle_1/self.theme.icons.scaling_angle),1)
 
         multiplier = max_icon_multiplier
         multiplier -= max_to_min_mtp_diff*scaling_mtp
@@ -385,7 +385,7 @@ class DrawingWindow(QMainWindow):
             label (MenuItem): Menu Item with specified parameters of drawing.
         """
 
-        theme = self.selected_theme
+        theme = self.theme
         arc_speed = theme.volume_arc.animation_speed
         if not self.menu_visible:
             return
@@ -457,7 +457,7 @@ class DrawingWindow(QMainWindow):
             center (QPoint): Position of center of application window.
             label (MenuItem): Menu Item with specified parameters of drawing.
         """
-        theme = self.selected_theme
+        theme = self.theme
 
         if not self.menu_visible:
             return
@@ -507,7 +507,7 @@ class DrawingWindow(QMainWindow):
 
         volume = round(volume*100)
         if volume <= 0:
-            if isinstance(label, AppVolume) and self.selected_theme.show_zero_volume:
+            if isinstance(label, AppVolume) and self.theme.show_zero_volume:
                 volume = "Mute"
             else:
                 volume = ""
@@ -599,7 +599,7 @@ class DrawingWindow(QMainWindow):
             self.opacity_multiplier = 1
             self.last_turn = None
 
-            self.selected_theme = self.theme
+            self.theme = self.selected_theme
 
             self.current_volume = 1
             self.volume_animated = 1
@@ -685,8 +685,8 @@ class DrawingWindow(QMainWindow):
         Parameters:
             Theme (Theme): Theme to activate.
         """
-        self.theme = theme
-        self.selected_theme = self.theme
+        self.selected_theme = theme
+        self.theme = self.selected_theme
         self.load_colored_icons()
         settings = {}
         with open('settings.json', 'r', encoding='utf-8') as file:
@@ -891,9 +891,9 @@ class DrawingWindow(QMainWindow):
                     else:
                         themes.append(Theme(themes_json.get(theme_config), self.refresh_rate))
                 self.themes = themes
-                self.theme = Theme.find_by_name(theme)
-                self.selected_theme = self.theme
-                self.inactivity_timer.setInterval(self.theme.fade_out_timeout)
+                self.selected_theme = Theme.find_by_name(theme)
+                self.theme = self.selected_theme
+                self.inactivity_timer.setInterval(self.selected_theme.fade_out_timeout)
         except FileNotFoundError:
             pass
 
@@ -943,9 +943,9 @@ class DrawingWindow(QMainWindow):
                 for i in range(image_colored.size[0]):
                     for j in range(image_colored.size[1]):
                         colored_pixels[i,j] = (
-                                                self.selected_theme.preferred_icon_color.r,
-                                                self.selected_theme.preferred_icon_color.g,
-                                                self.selected_theme.preferred_icon_color.b,
+                                                self.theme.preferred_icon_color.r,
+                                                self.theme.preferred_icon_color.g,
+                                                self.theme.preferred_icon_color.b,
                                                 image_pixels[i,j][3]
                         )
 
@@ -966,9 +966,9 @@ class DrawingWindow(QMainWindow):
                     for i in range(image_colored.size[0]):
                         for j in range(image_colored.size[1]):
                             colored_pixels[i,j] = (
-                                                self.selected_theme.preferred_icon_color.r,
-                                                self.selected_theme.preferred_icon_color.g,
-                                                self.selected_theme.preferred_icon_color.b,
+                                                self.theme.preferred_icon_color.r,
+                                                self.theme.preferred_icon_color.g,
+                                                self.theme.preferred_icon_color.b,
                                                 image_pixels[i,j][3]
                             )
 
