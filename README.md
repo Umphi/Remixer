@@ -1,4 +1,4 @@
-# 🎛️ Remixer
+# 🎧 Remixer
 
 **Remixer** is an application that extends keyboard volume key functionality with **per-application volume control**. It also supports custom control devices (e.g., rotary encoders).
 
