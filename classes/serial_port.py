@@ -145,7 +145,7 @@ class SerialDevice:
     @classmethod
     def _dispatch_event(cls, line):
         """Event handling"""
-        for event_name, callbacks in cls._events:
+        for event_name, callbacks in cls._events.items():
             if str(line).startswith(event_name):
                 for callback in callbacks:
                     callback()
