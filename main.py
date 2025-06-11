@@ -19,10 +19,10 @@ from PyQt6.QtGui import QPainter, QColor, QPen, QFont, QFontMetrics, QPixmap, QI
 from PyQt6.QtCore import Qt, QTimer, QPoint, QRectF, QSize
 from pycaw.pycaw import AudioUtilities
 
-from classes.menu import Menu, Placeholder, Button, AppVolume
-from classes.remixer_theme import RemixerTheme as Theme
-from classes.scroller import AdaptiveTouchScroller as Scroller
-from classes.serial_port import SerialDevice
+from core.menu import Menu, Placeholder, Button, AppVolume
+from core.remixer_theme import RemixerTheme as Theme
+from modules.scroller import AdaptiveTouchScroller as Scroller
+from modules.serial_port import SerialDevice
 
 
 class DrawingWindow(QMainWindow):
