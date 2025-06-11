@@ -27,7 +27,7 @@ from modules.serial_port import SerialDevice
 
 class DrawingWindow(QMainWindow):
     """
-    DrawingWindow ... speaks for itself
+    DrawingWindow object of PyQt6 ... speaks for itself
     """
     def __init__(self, app):
         super().__init__()
