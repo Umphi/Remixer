@@ -1,0 +1,20 @@
+{
+    "Aliases": {
+        "AMPLibraryAgent.exe": "Apple Music",
+        "brave.exe": "Brave",
+        "cs2.exe": "Counter-Strike 2",
+        "taskhostw.exe": "System",
+        "steam.exe": "Steam",
+        "obs64.exe": "OBS"
+    },
+    "IgnoreProcesses": [
+        "svchost.exe",
+        "AppleMusic.exe"
+    ],
+    "ImageReplacements": {
+        "AMPLibraryAgent.exe": "AppleMusic.exe"
+    },
+    "SelectedTheme": "MonoDark",
+    "SerialCOM": "COM4",
+    "SerialBaud": 115200
+}

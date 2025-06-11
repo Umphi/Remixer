@@ -1,0 +1,10 @@
+dist/*
+build/*
+icons/*
+main.spec
+classes/__pycache__/*
+AppIcon.ico
+AppIcon.png
+!icons/internal
+!icons/internal/AppIcon.png
+README.target.md

@@ -1,0 +1,27 @@
+name: Python CI
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Install dependencies
+      run: |
+        pip install -r requirements.txt
+
+    - name: Install pylint
+      run: |
+        pip install pylint
+
+    - name: Lint with pylint
+      run: |
+        pylint main.py --extension-pkg-whitelist=PyQt6,win32ui,win32gui
