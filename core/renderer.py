@@ -1,0 +1,389 @@
+import math
+from PyQt6.QtCore import Qt, QPoint, QRectF
+from PyQt6.QtGui import QPen, QFont, QFontMetrics
+from core.remixer_theme import RemixerTheme as Theme
+from core.menu import AppVolume, Placeholder
+from core.icon_manager import IconManager
+
+class Renderer:
+    focus_pie_angle = 0
+    focus_pie_target = 0
+    focus_pie_span = 0
+    focus_pie_target_span = 0
+    last_turn = None
+    volume_animated = 1
+    focused_index = 0
+    opacity_multiplier = 1
+    menu = None
+    active_option = None
+    current_volume = 1
+
+    def __init__(self, screen_size, refresh_rate, settings):
+        self.screen_size = screen_size
+        self.refresh_rate = refresh_rate
+        self.settings = settings
+        self.icon_manager = IconManager(settings, AppVolume.get_pid_dict())
+
+    def set_focused_index(self, index):
+        self.focused_index = index
+
+    def set_turn(self, turn):
+        self.last_turn = turn
+
+    def update_apps(self):
+        self.icon_manager.load_icons(AppVolume.get_pid_dict())
+        self.icon_manager.load_colored_icons()
+
+    def draw(self, painter, theme, menu):
+        self.menu = menu
+        
+        center = QPoint(self.screen_size.width()//2, self.screen_size.height()//2)
+        radius = 150
+        sectors = len(menu)
+
+        focus_angle_1 = (self.focus_pie_target-self.focus_pie_angle)%360
+
+        distance_between_angles = 360 - focus_angle_1 if focus_angle_1 > 180 else focus_angle_1
+
+        typical_far_angle = 80
+
+        speed_multiplier = 1
+
+        if distance_between_angles > typical_far_angle:
+            diff_coef = (1 - (180-distance_between_angles)/(180-typical_far_angle))
+            speed_multiplier = (theme.focused_sector.animation_multiplier - 1) * diff_coef + 1
+
+        speed = 0
+        if focus_angle_1 != 0:
+            speed = theme.focused_sector.animation_speed*speed_multiplier
+
+            if self.last_turn is None:
+                if focus_angle_1 > 180:
+                    speed = (speed if (360 - focus_angle_1) > speed else 360-focus_angle_1)
+                    self.focus_pie_angle -= speed
+                elif focus_angle_1 <= 180:
+                    speed = (speed if focus_angle_1 > speed else focus_angle_1)
+                    self.focus_pie_angle += speed
+            else:
+                if focus_angle_1 <= speed:
+                    self.focus_pie_angle = self.focus_pie_target
+                else:
+                    if self.last_turn == "right":
+                        self.focus_pie_angle -= speed
+                    elif self.last_turn == "left":
+                        self.focus_pie_angle += speed
+            if self.focus_pie_angle >= 360:
+                self.focus_pie_angle -= 360
+            if self.focus_pie_angle < 0:
+                self.focus_pie_angle = 360 + self.focus_pie_angle
+
+        span_difference = math.fabs(self.focus_pie_span-self.focus_pie_target_span)
+        ease_out_mp = 1/((min(span_difference/16,25)/25)*(theme.volume_arc.ease_out_speed*0.2-1)+1)
+        span_changing = 16*theme.volume_arc.animation_speed*speed_multiplier*ease_out_mp
+
+        if span_difference > span_changing:
+            span_changing_speed = span_changing
+        else:
+            span_changing_speed = math.fabs(self.focus_pie_span-self.focus_pie_target_span)
+
+        if focus_angle_1 != 0 and speed * 2 > span_changing_speed:
+            span_changing_speed = speed * 2
+
+        if self.focus_pie_span < self.focus_pie_target_span:
+            self.focus_pie_span += span_changing_speed
+        elif self.focus_pie_span > self.focus_pie_target_span:
+            self.focus_pie_span -= span_changing_speed
+
+        for i, label in enumerate(menu):
+            self.draw_sector(painter, theme, center, radius, sectors, i, label)
+
+        self.draw_focus(painter, theme, center, radius, sectors, self.focus_pie_angle, speed)
+
+        for i, label in enumerate(menu):
+            if isinstance(label, Theme):
+                continue
+            self.draw_all_icons(painter, theme, center, radius, sectors, i, label)
+
+        self.draw_center_label(painter, theme, center)
+
+
+    def draw_sector(self, painter, theme, center, radius, sectors, i, label):
+        """
+        Draws menu sector (pie).
+
+        Parameters:
+            painter (QPainter): Used PyQt painter.
+            center (QPoint): Position of center of imaginary circle that will be cut for pies.
+            radius (int): Radius of imaginary circle in pixels.
+            sectors (int): Count of items in current menu.
+            i (int): Index of active menu item.
+            label (MenuItem): Menu Item with specific parameters of drawing.
+        """
+        angle = 360 / sectors
+        start_angle = (i * angle - 90) * 16
+        span_angle = angle * 16
+
+        is_focused = i == self.focused_index
+        brush_color = theme.sector.fill.to_QColor(self.opacity_multiplier)
+        pen_color = theme.sector.outline.to_QColor(self.opacity_multiplier)
+
+        painter.setPen(pen_color)
+        painter.setBrush(brush_color)
+
+        painter.drawPie(
+                        int(center.x() - radius),
+                        int(center.y() - radius),
+                        int(radius * 2),
+                        int(radius * 2),
+                        int(start_angle),
+                        int(span_angle)
+                        )
+
+        if is_focused:
+            if isinstance(label, Theme):
+                self.settings.set_showing_theme(label)
+
+    def draw_focus(self, painter, theme, center, radius, sectors, f_angle, speed = 0):
+        """
+        Draws user pointer sector (pie).
+
+        Parameters:
+            painter (QPainter): Used PyQt painter.
+            center (QPoint): Position of center of imaginary circle that will be cut for pies.
+            radius (int): Radius of imaginary circle in pixels.
+            sectors (int): Count of items in current menu.
+            f_angle (int): Angle on the circle that pointer should point.
+            speed (float): Used to remove outline when pointer moving fast to prevent flickering.
+        """
+        angle = 360 / sectors
+        span_angle = angle * 16
+        start_angle = f_angle*16 - 0.5*self.focus_pie_span
+
+        brush_color = theme.focused_sector.fill.to_QColor(self.opacity_multiplier)
+        pen_color = theme.focused_sector.outline.to_QColor(self.opacity_multiplier)
+        if speed > 2:
+            pen_color = theme.focused_sector.fill.to_QColor(self.opacity_multiplier)
+
+        painter.setPen(pen_color)
+        painter.setBrush(brush_color)
+
+        draw_radius = radius * 1.1
+        draw_size = int(draw_radius * 2)
+
+        self.focus_pie_target_span = span_angle
+
+        painter.drawPie(
+                        int(center.x() - draw_radius),
+                        int(center.y() - draw_radius),
+                        draw_size,
+                        draw_size,
+                        int(start_angle),
+                        int(self.focus_pie_span)
+        )
+
+        label = self.menu[self.focused_index]
+        self.draw_volume_arc(painter, theme, center, radius, start_angle, span_angle, sectors, label)
+
+    def draw_all_icons(self, painter, theme, center, radius, sectors, i, label):
+        """
+        Calculates icon drawing position and size depending
+        on the position relative to user pointer.
+        Then pass parameters to draw_icon(...)
+
+        Parameters:
+            painter (QPainter): Used PyQt painter.
+            center (QPoint): Position of center of application window.
+            radius (int): Radius of imaginary circle in pixels.
+            sectors (int): Count of items in current menu.
+            i (int): Index of menu element.
+            label (MenuItem): Menu Item with specified parameters of drawing.
+        """
+        current_angle = i * 360 / sectors - 90 + (360 / sectors) / 2
+        focused_angle = self.focus_pie_angle
+
+        max_icon_multiplier = theme.icons.max_scaling
+        min_icon_multiplier = theme.icons.min_scaling
+
+        focus_angle_1 = (focused_angle-current_angle)%360
+        if focus_angle_1 > 180:
+            focus_angle_1 = 360 - focus_angle_1
+
+        max_to_min_mtp_diff = max_icon_multiplier-min_icon_multiplier
+        scaling_mtp = min((focus_angle_1/theme.icons.scaling_angle),1)
+
+        multiplier = max_icon_multiplier
+        multiplier -= max_to_min_mtp_diff*scaling_mtp
+        self.draw_icon(painter, label, center, radius, i, sectors, multiplier)
+
+    def draw_icon(self, painter, label, center, radius, i, sectors, size_multiplier=1):
+        """
+        Draws icon with given by draw_all_icons parameters.
+
+        Parameters:
+            painter (QPainter): Used PyQt painter.
+            label (MenuItem): Menu Item with specified parameters of drawing.
+            center (QPoint): Position of center of application window.
+            radius (int): Radius of imaginary circle in pixels.
+            i (int): Index of menu element.
+            sectors (int): Count of items in current menu.
+            size_multiplier (float): Image size multiplier.
+        """
+        icon = self.icon_manager.icons.get(label.icon)
+        #if f"{label.icon}_Colorable" in self.icon_manager.icons:
+        if label.icon in self.icon_manager.colored_icons:
+            icon = self.icon_manager.colored_icons.get(label.icon)
+
+        if not icon:
+            icon = self.icon_manager.colored_icons.get("Unknown")
+
+        icon_size = int(size_multiplier*32)
+        angle_rad = math.radians(i * 360 / sectors - 90 + (360 / sectors) / 2)
+        x = center.x() + math.cos(angle_rad) * (radius * 0.7) - icon_size // 2
+        y = center.y() - math.sin(angle_rad) * (radius * 0.7) - icon_size // 2
+        painter.setOpacity(self.opacity_multiplier)
+        painter.drawPixmap(int(x), int(y), icon_size, icon_size, icon)
+
+    def set_active_option(self, option):
+        self.active_option = option
+
+    def draw_volume_arc(self, painter, theme, center, radius, start_angle, span_angle, sectors, label):
+        """
+        Draws arc around menu used as current volume slider indicator.
+        Actually draws 2 arcs, one above another, to create outline/shadow.
+
+        Parameters:
+            painter (QPainter): Used PyQt painter.
+            center (QPoint): Position of center of application window.
+            radius (int): Radius of imaginary circle in pixels.
+            start_angle (int): Start angle of arc.
+            span_angle (int): Span angle of arc.
+            sectors (int): Count of items in current menu.
+            label (MenuItem): Menu Item with specified parameters of drawing.
+        """
+
+        arc_speed = theme.volume_arc.animation_speed
+
+        item = self.menu.index(label)
+
+        if self.active_option:
+            if isinstance(item, AppVolume):
+                if item.session.Process:
+                    self.current_volume = item.session.SimpleAudioVolume.GetMasterVolume()
+            volume_difference = math.fabs(self.volume_animated - self.current_volume)
+            ease_activation_difference = 0.3
+            ease_out_multiplier = 1
+            if volume_difference < ease_activation_difference:
+                ease_out_multiplier = 1-volume_difference/ease_activation_difference
+                ease_out_multiplier = 1/(ease_out_multiplier*(theme.volume_arc.ease_out_speed-1)+1)
+
+            vol_delta = 0.01*arc_speed*ease_out_multiplier
+            if self.volume_animated < self.current_volume:
+                self.volume_animated = min(self.current_volume, self.volume_animated+vol_delta)
+            elif self.volume_animated > self.current_volume:
+                self.volume_animated = max(self.current_volume, self.volume_animated-vol_delta)
+        else:
+            self.current_volume = 1
+            self.volume_animated = min(self.current_volume, self.volume_animated+0.01*arc_speed)
+
+        arc_rect = QRectF(
+            center.x() - radius * 1.1 + radius * 0.05,
+            center.y() - radius * 1.1 + radius * 0.05,
+            radius * 2.2 - radius * 0.1,
+            radius * 2.2 - radius * 0.1
+        )
+
+        span_diff = self.focus_pie_span-span_angle
+        span_angle = self.focus_pie_span
+
+        painter.setPen(
+                    QPen(
+                        theme.volume_arc.background.to_QColor(self.opacity_multiplier),
+                        int(radius * 0.1),
+                        cap=Qt.PenCapStyle.FlatCap
+                    )
+        )
+        painter.drawArc(
+                        arc_rect,
+                        int(start_angle + span_angle),
+                        int((360 - 360/sectors) * 16-span_diff)
+        )
+
+        painter.setPen(
+                    QPen(
+                        theme.volume_arc.foreground.to_QColor(self.opacity_multiplier),
+                        int(radius * 0.1),
+                        cap=Qt.PenCapStyle.FlatCap
+                    )
+        )
+        full_wo_one = 360 - 360/sectors
+        diff = full_wo_one - full_wo_one * self.volume_animated
+        start = int(start_angle + span_angle + (diff) * 16)
+        painter.drawArc(arc_rect, start, int(full_wo_one * self.volume_animated * 16-span_diff))
+
+    def draw_center_label(self, painter, theme, center):
+        """
+        Draws circle with information in the center of application menu
+
+        Parameters:
+            painter (QPainter): Used PyQt painter.
+            center (QPoint): Position of center of application window.
+            label (MenuItem): Menu Item with specified parameters of drawing.
+        """
+        label = self.menu[self.focused_index]
+        text = label.name
+
+        volume = 0
+        mute = 0
+
+        if isinstance(label, AppVolume):
+            if label.session.Process:
+                volume = label.session.SimpleAudioVolume.GetMasterVolume()
+
+        font = QFont('Helvetica', 10, QFont.Weight.Bold)
+        fm = QFontMetrics(font)
+        ha = fm.horizontalAdvance(text)
+
+        painter.setBrush(theme.center_circle.fill.to_QColor(self.opacity_multiplier))
+        painter.setPen(theme.center_circle.outline.to_QColor(self.opacity_multiplier))
+        center_size = int(theme.center_circle.size_multiplier * 120)
+        painter.drawEllipse(
+                            center.x() - center_size//2,
+                            center.y() - center_size//2,
+                            center_size,
+                            center_size
+        )
+
+        painter.setFont(font)
+        painter.setPen(theme.center_circle.text_color.to_QColor(self.opacity_multiplier))
+
+        if isinstance(label, Placeholder):
+            text = label.text
+            line_height = fm.height()
+            line_space = 3
+            lines = text.split("\n")
+            #full_height = len(lines)*line_height+(len(lines)-1)*3
+            for i, line in enumerate(lines):
+                ha = fm.horizontalAdvance(line)
+                painter.drawText(
+                                center.x() - ha // 2,
+                                center.y() + i * (line_height + line_space) + 7,
+                                line
+                )
+        else:
+            painter.drawText(center.x() - ha // 2, center.y() + 6, text)
+
+        volume = round(volume*100)
+        if volume <= 0:
+            if isinstance(label, AppVolume) and theme.show_zero_volume:
+                volume = "Mute"
+            else:
+                volume = ""
+        else:
+            volume = f"{volume}%"
+
+        if mute == 1:
+            volume = "Mute"
+
+        hav = fm.horizontalAdvance(volume)
+        painter.setPen(theme.center_circle.volume_text_color.to_QColor(self.opacity_multiplier))
+        painter.drawText(center.x() - hav // 2, center.y() + 35, volume)
