@@ -77,11 +77,15 @@ remixer/
 ├── settings.json         # Configuration file
 ├── themes.json           # Themes file
 ├── requirements.txt      # Python dependencies
-├── classes/
-│   └── menu.py           # Menu construction
-│   └── remixer_theme.py  # Theme processing
+├── core/
+│   ├── menu.py           # Menu construction
+│   ├── remixer_theme.py  # Theme processing
+│   ├── renderer.py       # Application drawing
+│   ├── icon_manager.py   # Loading and providing icons
+│   └── settings.py       # Common application settings control
+├── modules/
+│   ├── serial_port.py    # Operating with custom controllers
 │   └── scroller.py       # Smooth in-system scrolling (currently supports only custom controllers)
-│   └── serial_port.py    # Operating with custom controllers
 ├── icons/
 │   └── internal/         # Internal icons for menu 
 │       └── ... 
@@ -100,38 +104,12 @@ Pull requests are welcome but please open an issue first to discuss what you'd l
 
 ## 🧪 Workflows
 
-A GitHub Actions workflow (`.github/workflows/python-app.yml`) is recommended to automate linting and testing. Example:
+Remixer uses [GitHub Actions](https://github.com/features/actions) to automatically:
+- check code formatting and linting
+- install dependencies
+- run tests (if any are added later)
 
-```yaml
-name: Python CI
-
-on: [push, pull_request]
-
-jobs:
-  build:
-    runs-on: windows-latest
-
-    steps:
-    - uses: actions/checkout@v3
-
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.11'
-
-    - name: Install dependencies
-      run: |
-        pip install -r requirements.txt
-
-    - name: Install pylint
-      run: |
-        pip install pylint
-
-    - name: Lint with pylint
-      run: |
-        pylint main.py
-
-```
+You can find the relevant workflow config [here](.github/workflows/python-app.yml).
 
 ---
 
