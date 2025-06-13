@@ -11,24 +11,23 @@ import math
 import keyboard
 
 from PyQt6.QtWidgets import QApplication, QMainWindow, QMenu, QSystemTrayIcon
-from PyQt6.QtGui import QPainter, QColor, QIcon, QAction
+from PyQt6.QtGui import QPainter, QIcon, QAction
 from PyQt6.QtCore import Qt, QTimer, QSize
-from pycaw.pycaw import AudioUtilities
 
 from core.renderer import Renderer
-from core.menu import Menu, Placeholder, Button, AppVolume
+from core.menu import Menu, Button, AppVolume, ThemeItem
 from core.remixer_theme import RemixerTheme as Theme
 from core.settings import SettingsManager
+from core.menu_manager import MenuManager
+from core.resource_loader import Loader
 from modules.scroller import AdaptiveTouchScroller as Scroller
 from modules.serial_port import SerialDevice
 
 
-class DrawingWindow(QMainWindow):
+class DrawingWindow(QMainWindow): # pylint: disable=too-many-instance-attributes   # Rework in progress
     """
     DrawingWindow object of PyQt6 ... speaks for itself
     """
-    # pylint: disable=too-many-instance-attributes
-    # Rework in progress.
     def __init__(self, app):
         super().__init__()
 
@@ -36,14 +35,14 @@ class DrawingWindow(QMainWindow):
 
         self.settings = SettingsManager(refresh_rate=self.refresh_rate)
 
+        callbacks = { "hide_menu": self.hide_menu }
+
+        self.menu_manager = MenuManager(self.settings, callbacks=callbacks)
+
         self.renderer = None
 
         self.init_ui()
         self._init_timers()
-
-        self.setWindowFlag(Qt.WindowType.Tool)
-
-        self.credits = "Version: 1.0 Alpha\nRemixer\nby Umphi"
 
         self.last_volume_adjust_time = 0
         self.volume_adjust_rate = 1
@@ -54,7 +53,7 @@ class DrawingWindow(QMainWindow):
         if os.path.exists("./icons/internal/AppIcon.png"):
             self.tray_icon.setIcon(QIcon('./icons/internal/AppIcon.png'))
         else:
-            self.tray_icon.setIcon(QIcon(self.resource_path('./icons/internal/AppIcon.png')))
+            self.tray_icon.setIcon(QIcon(Loader.resource_path('./icons/internal/AppIcon.png')))
 
         self.tray_menu = QMenu()
         self.tray_menu.addAction(self.quit_action)
@@ -72,20 +71,11 @@ class DrawingWindow(QMainWindow):
                                 fps_max=50.0
         )
 
-        self.icons = {}
-        self.colored_icons = {}
-        self.sessions = []
-
         self.menu_visible = False
-
-        self.current_menu = {}
-        self.menu_stack = []
-        self.menu_keys = []
 
         self.scroll_mode = False
         self.scroll_direction = "vertical"
 
-        self._reload_apps()
 
     def init_ui(self):
         """
@@ -93,13 +83,15 @@ class DrawingWindow(QMainWindow):
         """
         self.screen_size = QSize(330, 330)
         screen = self.screen_size
+
         self.setGeometry(30, 1025, screen.width(), screen.height())
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
-        self.setWindowFlags(Qt.WindowType.FramelessWindowHint|Qt.WindowType.WindowStaysOnTopHint)
-        self.renderer = Renderer(screen, self.refresh_rate, self.settings)
+        self.setWindowFlag(Qt.WindowType.FramelessWindowHint)
+        self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint)
+        self.setWindowFlag(Qt.WindowType.Tool)
 
-        self.pen_width = 4
-        self.pen_color = QColor(255, 0, 0)
+        self.renderer = Renderer(screen, self.refresh_rate, self.settings)
+        self.menu_manager.add_observer(self.renderer)
 
     def _init_timers(self):
         """
@@ -137,94 +129,7 @@ class DrawingWindow(QMainWindow):
         painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
 
         if self.menu_visible:
-            self.renderer.draw(painter, theme, self.current_menu.items)
-
-    def _reload_apps(self):
-        """
-        Reloads menu with updating available applications producing sound.
-        """
-        if self.menu_visible:
-            return
-
-        self.sessions = AudioUtilities.GetAllSessions()
-
-        current_menu = Menu("Main", None, None)
-        current_menu.add_item(Menu("Settings",
-                                "Settings",
-                                [
-                                    Menu(
-                                        "Theme",
-                                        "Theme"
-                                    ),
-                                    Placeholder(
-                                                "Credits",
-                                                "Credits",
-                                                self.credits
-                                    ),
-                                    Button(
-                                            "Back",
-                                            "Back", 
-                                            self.menu_back
-                                    ),
-                                    Menu(
-                                            "Exit",
-                                            "Exit",
-                                            [
-                                                Button("Back",
-                                                      "Back",
-                                                      self.menu_back
-                                                      ),
-                                                Button("Confirm Exit",
-                                                       "Exit", 
-                                                       sys.exit
-                                                       )
-                                            ]
-                                        )
-                                    ]
-                                )
-                            )
-        current_menu.add_item(Button("Hide", "Close", self.hide_menu))
-
-        for theme in self.settings.themes:
-            current_menu.index("Settings").index("Theme").add_item(theme)
-
-        for session in self.sessions:
-            if session.Process:
-                name = session.Process.name()
-                if name in self.settings.ignored_apps:
-                    continue
-                alias = self.settings.aliases.get(name, name.replace(".exe", ""))
-                current_menu.add_item(
-                                    AppVolume(
-                                            alias,
-                                            name,
-                                            session,
-                                            filename_ = name,
-                                            pid_ = session.Process.pid
-                                    )
-                )
-
-        self.current_menu = current_menu
-        self.menu_stack = []
-
-        self.renderer.update_apps()
-
-    def _set_focus_target(self, set_current=False):
-        """
-        Sets user pointer target angle(for animated shifting)
-
-        Parameters:
-            set_current (bool): Forces user pointer to change position instantly without animation.
-        """
-        angle = 360 / len(self.current_menu.items)
-        start_angle = (self.renderer.focused_index * angle - 90) * 16
-        span_angle = angle * 16
-        self.renderer.focus_pie_target = int((start_angle+span_angle/2)/16)
-
-        if self.renderer.focus_pie_target < 0:
-            self.renderer.focus_pie_target = 360 + self.renderer.focus_pie_target
-        if set_current:
-            self.renderer.focus_pie_angle = self.renderer.focus_pie_target
+            self.renderer.draw(painter, theme)
 
     def _fade_step(self):
         """
@@ -236,29 +141,20 @@ class DrawingWindow(QMainWindow):
             self.menu_visible = False
             self.renderer.set_active_option(None)
             self.renderer.opacity_multiplier = 1
-            self.renderer.set_turn(None)
 
             self.settings.theme = self.settings.get_selected_theme()
 
             self.renderer.volume_animated = 1
 
-            if len(self.menu_stack) > 0:
-                self.menu_stack.reverse()
-                self.current_menu, focused_index = self.menu_stack.pop()
-                self.renderer.set_focused_index(focused_index)
-                self.menu_stack.clear()
-                self.renderer.focus_pie_target_span = 360*16/len(self.current_menu.items)
-                self.renderer.focus_pie_span = self.renderer.focus_pie_target_span
         self.update()
 
     def show_menu(self):
         """
         Shows circular menu (application)
         """
-        self._reload_apps()
+        self.menu_manager.reload_menu()
         self.menu_visible = True
-        self.renderer.set_focused_index(0)
-        self._set_focus_target(True)
+        self.menu_manager.return_top_level_menu()
         self.inactivity_timer.start()
 
     def hide_menu(self):
@@ -267,7 +163,6 @@ class DrawingWindow(QMainWindow):
         """
         self.inactivity_timer.stop()
         self.fade_timer.start()
-
 
     def scroll(self, scroll_direction, _direction):
         """
@@ -308,7 +203,6 @@ class DrawingWindow(QMainWindow):
 
         if dt > 0.28:
             self.volume_adjust_rate = 1
-
         if dt < 0.12:
             self.volume_adjust_rate = min(10, self.volume_adjust_rate + 0.5)
         else:
@@ -326,17 +220,6 @@ class DrawingWindow(QMainWindow):
         """
         self.settings.change_theme(theme)
         self.inactivity_timer.setInterval(self.settings.get_selected_theme().fade_out_timeout)
-        self.load_colored_icons()
-
-    def menu_back(self):
-        """
-        Returns to parent menu.
-        """
-        self.current_menu, focused_index = self.menu_stack.pop()
-        self.renderer.set_focused_index(focused_index)
-        self.renderer.set_turn(None)
-        self._set_focus_target()
-
 
     def control_click_safe(self):
         """
@@ -358,38 +241,32 @@ class DrawingWindow(QMainWindow):
             self.show_menu()
             return
 
-        self.renderer.set_turn(None)
-
-        focused_option = self.current_menu.items[self.renderer.focused_index]
+        focused = self.menu_manager.get_focus_item()
         self.inactivity_timer.start()
 
         if self.renderer.active_option:
             self.renderer.set_active_option(None)
             return
 
-        if isinstance(focused_option, Button):
-            focused_option.action()
-        elif isinstance(focused_option, AppVolume):
-            self.renderer.set_active_option(focused_option)
+        if isinstance(focused, Button):
+            focused.action()
+        elif isinstance(focused, AppVolume):
+            self.renderer.set_active_option(focused)
             if self.renderer.active_option.session.Process:
                 sav = self.renderer.active_option.session.SimpleAudioVolume
                 self.renderer.current_volume = sav.GetMasterVolume()
             self.renderer.volume_animated = 1
-        elif isinstance(focused_option, Menu):
-            self.menu_stack.append((self.current_menu, self.renderer.focused_index))
-            self.current_menu = focused_option
-            self.renderer.focused_index = 0
+        elif isinstance(focused, Menu):
+            self.menu_manager.menu_enter(focused)
+            current_theme = self.settings.get_showing_theme().name
+            self.menu_manager.set_focus_by_condition(
+                lambda item:
+                    isinstance(item, ThemeItem) and item.name == current_theme
+            )
 
-            if focused_option.name == "Theme":
-                focused_index = focused_option.indexof(self.settings.get_showing_theme().name)
-                self.renderer.set_focused_index(focused_index)
-
-            self._set_focus_target()
-        elif isinstance(focused_option, Theme):
-            self.change_theme(focused_option)
-            self.current_menu, focused_index = self.menu_stack.pop()
-            self.renderer.set_focused_index(focused_index)
-            self._set_focus_target()
+        elif isinstance(focused, Theme):
+            self.change_theme(focused)
+            self.menu_manager.menu_back()
 
     def control_up_safe(self):
         """
@@ -404,13 +281,9 @@ class DrawingWindow(QMainWindow):
             keyboard.send(-175)
             return
 
-        self.renderer.set_turn("right")
-
         self.inactivity_timer.start()
         if self.renderer.active_option is None:
-            focused_index = (self.renderer.focused_index - 1) % len(self.current_menu.items)
-            self.renderer.set_focused_index(focused_index)
-            self._set_focus_target()
+            self.menu_manager.rotate(1)
         else:
             self.adjust_volume(self.renderer.active_option, self.get_volume_delta(0.01))
 
@@ -427,13 +300,9 @@ class DrawingWindow(QMainWindow):
             keyboard.send(-174)
             return
 
-        self.renderer.set_turn("left")
-
         self.inactivity_timer.start()
         if self.renderer.active_option is None:
-            focused_index = (self.renderer.focused_index + 1) % len(self.current_menu.items)
-            self.renderer.set_focused_index(focused_index)
-            self._set_focus_target()
+            self.menu_manager.rotate(-1)
         else:
             self.adjust_volume(self.renderer.active_option, -self.get_volume_delta(0.01))
 
@@ -486,21 +355,6 @@ class DrawingWindow(QMainWindow):
         Due to the specifics of PyQt, control_hold_safe cannot be called directly.
         """
         QTimer.singleShot(0, self.control_hold_safe)
-
-    def resource_path(self, relative_path):
-        """
-        Loads resources from internal storage.
-        Used in pre-built version of Remixer
-        Parameters:
-            relative_path (str): Path to resource.
-        """
-        try:
-            base_path = sys._MEIPASS   # pylint: disable=protected-access disable=no-member   # Reason: Used to load resources in pre-built version of Remixer
-        except Exception:              # pylint: disable=broad-exception-caught               # Reason: Intercepts any errors, no action required
-            base_path = os.path.abspath(".")
-        relative_path = relative_path.replace("./", "").replace("/","\\")
-
-        return os.path.join(base_path, relative_path)
 
 
 if __name__ == "__main__":

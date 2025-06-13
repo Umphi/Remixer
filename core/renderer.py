@@ -1,11 +1,17 @@
+# pylint: disable=too-many-locals,too-many-instance-attributes,too-many-arguments,too-many-positional-arguments,too-many-branches # WIP
+"""
+Application renderer
+"""
 import math
 from PyQt6.QtCore import Qt, QPoint, QRectF
 from PyQt6.QtGui import QPen, QFont, QFontMetrics
-from core.remixer_theme import RemixerTheme as Theme
 from core.menu import AppVolume, Placeholder
-from core.icon_manager import IconManager
+from core.menu_manager import MenuObserver
 
-class Renderer:
+class Renderer(MenuObserver):
+    """
+    Class that draws application
+    """
     focus_pie_angle = 0
     focus_pie_target = 0
     focus_pie_span = 0
@@ -22,24 +28,62 @@ class Renderer:
         self.screen_size = screen_size
         self.refresh_rate = refresh_rate
         self.settings = settings
-        self.icon_manager = IconManager(settings, AppVolume.get_pid_dict())
 
-    def set_focused_index(self, index):
+    def on_focus_changed(self, index, last_turn):
+        """
+        Implemented by MenuObserver. Called when menu focus changes
+        """
         self.focused_index = index
+        self.last_turn = last_turn
+        self.set_angles()
 
-    def set_turn(self, turn):
-        self.last_turn = turn
+    def on_menu_changed(self, menu):
+        """
+        Implemented by MenuObserver. Called when active menu changes
+        """
+        self.menu = menu
+        self.set_angles()
+
+    def set_angles(self, set_current = False):
+        """
+        Sets user pointer target angle(for animated shifting)
+
+        Parameters:
+            set_current (bool): Forces user pointer to change position instantly without animation.
+        """
+        angle = 360 / len(self.menu)
+        start_angle = (self.focused_index * angle - 90) * 16
+        span_angle = angle * 16
+        self.focus_pie_target = int((start_angle+span_angle/2)/16)
+
+        if self.focus_pie_target < 0:
+            self.focus_pie_target = 360 + self.focus_pie_target
+        if set_current:
+            self.focus_pie_angle = self.focus_pie_target
+
+    def set_active_option(self, option):
+        """
+        Sets active menu option flag
+        """
+        self.active_option = option
 
     def update_apps(self):
-        self.icon_manager.load_icons(AppVolume.get_pid_dict())
-        self.icon_manager.load_colored_icons()
+        """
+        Function used to load icons where new application were open
+        """
+        self.settings.icon_manager.load_icons(AppVolume.get_pid_dict())
+        self.settings.icon_manager.load_colored_icons()
 
-    def draw(self, painter, theme, menu):
-        self.menu = menu
-        
+    def draw(self, painter, theme):
+        """
+        Main draw function. Processes menu parameters and calls elements' drawing functions
+        """
+        if len(self.menu) <= 0:
+            return
+
         center = QPoint(self.screen_size.width()//2, self.screen_size.height()//2)
         radius = 150
-        sectors = len(menu)
+        sectors = len(self.menu)
 
         focus_angle_1 = (self.focus_pie_target-self.focus_pie_angle)%360
 
@@ -94,20 +138,18 @@ class Renderer:
         elif self.focus_pie_span > self.focus_pie_target_span:
             self.focus_pie_span -= span_changing_speed
 
-        for i, label in enumerate(menu):
-            self.draw_sector(painter, theme, center, radius, sectors, i, label)
+        for i, label in enumerate(self.menu):
+            self.draw_sector(painter, theme, center, radius, sectors, i)
 
         self.draw_focus(painter, theme, center, radius, sectors, self.focus_pie_angle, speed)
 
-        for i, label in enumerate(menu):
-            if isinstance(label, Theme):
-                continue
+        for i, label in enumerate(self.menu):
             self.draw_all_icons(painter, theme, center, radius, sectors, i, label)
 
         self.draw_center_label(painter, theme, center)
 
 
-    def draw_sector(self, painter, theme, center, radius, sectors, i, label):
+    def draw_sector(self, painter, theme, center, radius, sectors, i):
         """
         Draws menu sector (pie).
 
@@ -123,7 +165,6 @@ class Renderer:
         start_angle = (i * angle - 90) * 16
         span_angle = angle * 16
 
-        is_focused = i == self.focused_index
         brush_color = theme.sector.fill.to_QColor(self.opacity_multiplier)
         pen_color = theme.sector.outline.to_QColor(self.opacity_multiplier)
 
@@ -138,10 +179,6 @@ class Renderer:
                         int(start_angle),
                         int(span_angle)
                         )
-
-        if is_focused:
-            if isinstance(label, Theme):
-                self.settings.set_showing_theme(label)
 
     def draw_focus(self, painter, theme, center, radius, sectors, f_angle, speed = 0):
         """
@@ -182,7 +219,15 @@ class Renderer:
         )
 
         label = self.menu[self.focused_index]
-        self.draw_volume_arc(painter, theme, center, radius, start_angle, span_angle, sectors, label)
+        self.draw_volume_arc(painter,
+                            theme,
+                            center,
+                            radius,
+                            start_angle,
+                            span_angle,
+                            sectors,
+                            label
+        )
 
     def draw_all_icons(self, painter, theme, center, radius, sectors, i, label):
         """
@@ -228,13 +273,13 @@ class Renderer:
             sectors (int): Count of items in current menu.
             size_multiplier (float): Image size multiplier.
         """
-        icon = self.icon_manager.icons.get(label.icon)
+        icon = self.settings.icon_manager.icons.get(label.icon)
         #if f"{label.icon}_Colorable" in self.icon_manager.icons:
-        if label.icon in self.icon_manager.colored_icons:
-            icon = self.icon_manager.colored_icons.get(label.icon)
+        if label.icon in self.settings.icon_manager.colored_icons:
+            icon = self.settings.icon_manager.colored_icons.get(label.icon)
 
         if not icon:
-            icon = self.icon_manager.colored_icons.get("Unknown")
+            icon = self.settings.icon_manager.colored_icons.get("Unknown")
 
         icon_size = int(size_multiplier*32)
         angle_rad = math.radians(i * 360 / sectors - 90 + (360 / sectors) / 2)
@@ -243,10 +288,8 @@ class Renderer:
         painter.setOpacity(self.opacity_multiplier)
         painter.drawPixmap(int(x), int(y), icon_size, icon_size, icon)
 
-    def set_active_option(self, option):
-        self.active_option = option
-
-    def draw_volume_arc(self, painter, theme, center, radius, start_angle, span_angle, sectors, label):
+    def draw_volume_arc(self, painter, theme, center, radius,
+                        start_angle, span_angle, sectors, label):
         """
         Draws arc around menu used as current volume slider indicator.
         Actually draws 2 arcs, one above another, to create outline/shadow.
@@ -261,29 +304,11 @@ class Renderer:
             label (MenuItem): Menu Item with specified parameters of drawing.
         """
 
-        arc_speed = theme.volume_arc.animation_speed
-
         item = self.menu.index(label)
 
-        if self.active_option:
-            if isinstance(item, AppVolume):
-                if item.session.Process:
-                    self.current_volume = item.session.SimpleAudioVolume.GetMasterVolume()
-            volume_difference = math.fabs(self.volume_animated - self.current_volume)
-            ease_activation_difference = 0.3
-            ease_out_multiplier = 1
-            if volume_difference < ease_activation_difference:
-                ease_out_multiplier = 1-volume_difference/ease_activation_difference
-                ease_out_multiplier = 1/(ease_out_multiplier*(theme.volume_arc.ease_out_speed-1)+1)
+        self.update_current_volume(item)
 
-            vol_delta = 0.01*arc_speed*ease_out_multiplier
-            if self.volume_animated < self.current_volume:
-                self.volume_animated = min(self.current_volume, self.volume_animated+vol_delta)
-            elif self.volume_animated > self.current_volume:
-                self.volume_animated = max(self.current_volume, self.volume_animated-vol_delta)
-        else:
-            self.current_volume = 1
-            self.volume_animated = min(self.current_volume, self.volume_animated+0.01*arc_speed)
+        self.update_volume_animation(theme)
 
         arc_rect = QRectF(
             center.x() - radius * 1.1 + radius * 0.05,
@@ -292,33 +317,26 @@ class Renderer:
             radius * 2.2 - radius * 0.1
         )
 
-        span_diff = self.focus_pie_span-span_angle
-        span_angle = self.focus_pie_span
+        full_angle = 360 - 360 / sectors
+        animated_span = full_angle * self.volume_animated
+        span_diff = self.focus_pie_span - span_angle
+        animated_start = int(start_angle + self.focus_pie_span + (full_angle - animated_span) * 16)
 
-        painter.setPen(
-                    QPen(
-                        theme.volume_arc.background.to_QColor(self.opacity_multiplier),
-                        int(radius * 0.1),
-                        cap=Qt.PenCapStyle.FlatCap
-                    )
-        )
-        painter.drawArc(
-                        arc_rect,
-                        int(start_angle + span_angle),
-                        int((360 - 360/sectors) * 16-span_diff)
+        self.draw_arc(
+            painter, arc_rect,
+            theme.volume_arc.background,
+            radius * 0.1,
+            int(start_angle + self.focus_pie_span),
+            int(full_angle * 16 - span_diff)
         )
 
-        painter.setPen(
-                    QPen(
-                        theme.volume_arc.foreground.to_QColor(self.opacity_multiplier),
-                        int(radius * 0.1),
-                        cap=Qt.PenCapStyle.FlatCap
-                    )
+        self.draw_arc(
+            painter, arc_rect,
+            theme.volume_arc.foreground,
+            radius * 0.1,
+            animated_start,
+            int(animated_span * 16 - span_diff)
         )
-        full_wo_one = 360 - 360/sectors
-        diff = full_wo_one - full_wo_one * self.volume_animated
-        start = int(start_angle + span_angle + (diff) * 16)
-        painter.drawArc(arc_rect, start, int(full_wo_one * self.volume_animated * 16-span_diff))
 
     def draw_center_label(self, painter, theme, center):
         """
@@ -387,3 +405,53 @@ class Renderer:
         hav = fm.horizontalAdvance(volume)
         painter.setPen(theme.center_circle.volume_text_color.to_QColor(self.opacity_multiplier))
         painter.drawText(center.x() - hav // 2, center.y() + 35, volume)
+
+    def draw_arc(self, painter, rect, color, thickness, start_angle, span_angle):
+        """
+        Draws volume and background arcs with given parameters
+        """
+        pen = QPen(
+                    color.to_QColor(self.opacity_multiplier),
+                    int(thickness),
+                    cap=Qt.PenCapStyle.FlatCap
+        )
+        painter.setPen(pen)
+        painter.drawArc(rect, int(start_angle), int(span_angle))
+
+    def update_current_volume(self, item):
+        """
+        Sets target volume arc position
+        """
+        if self.active_option and isinstance(item, AppVolume) and item.session.Process:
+            self.current_volume = item.session.SimpleAudioVolume.GetMasterVolume()
+        elif not self.active_option:
+            self.current_volume = 1
+
+    def update_volume_animation(self, theme):
+        """
+        Performs animation of volume arc
+        """
+        vol_delta = 0.01 * theme.volume_arc.animation_speed
+
+        if self.active_option:
+            volume_difference = math.fabs(self.volume_animated - self.current_volume)
+            vol_delta *= self.compute_ease_out_multiplier(
+                                                            volume_difference,
+                                                            0.3,
+                                                            theme.volume_arc.ease_out_speed
+            )
+
+        if self.volume_animated < self.current_volume:
+            self.volume_animated = min(self.current_volume, self.volume_animated+vol_delta)
+        elif self.volume_animated > self.current_volume:
+            self.volume_animated = max(self.current_volume, self.volume_animated-vol_delta)
+
+    @staticmethod
+    def compute_ease_out_multiplier(diff, threshold, speed):
+        """
+        Computes ease out multiplier for volume arc with given parameters
+        """
+        if diff >= threshold:
+            return 1.0
+        ratio = diff / threshold
+        return 1.0 / ((1 - ratio) * (speed - 1) + 1)

@@ -3,8 +3,10 @@ Settings manager performs application settings control
 """
 import json
 from core.remixer_theme import RemixerTheme as Theme
+from core.icon_manager import IconManager
+from core.menu import AppVolume
 
-class SettingsManager:
+class SettingsManager: # pylint: disable=too-many-instance-attributes # Aknowledged
     """
     Controls application settings throughout run 
     """
@@ -24,6 +26,8 @@ class SettingsManager:
         self.theme = None
 
         self._load_settings()
+
+        self.icon_manager = IconManager(self, AppVolume.get_pid_dict())
 
     def _load_settings(self):
         """
@@ -60,7 +64,8 @@ class SettingsManager:
             Theme (Theme): Theme to activate.
         """
         self.selected_theme = theme
-        self.theme = self.selected_theme
+        self.theme = theme
+        self.icon_manager.load_colored_icons()
 
         settings = {}
         with open('settings.json', 'r', encoding='utf-8') as file:
@@ -70,10 +75,19 @@ class SettingsManager:
             json.dump(settings, file, ensure_ascii=False, indent=4)
 
     def get_selected_theme(self):
+        """
+        Gets selected theme
+        """
         return self.selected_theme
-    
+
     def get_showing_theme(self):
+        """
+        Gets currently shown theme
+        """
         return self.theme
-    
+
     def set_showing_theme(self, theme):
+        """
+        Sets currently showing theme
+        """
         self.theme = theme

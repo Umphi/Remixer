@@ -41,7 +41,7 @@ class SerialDevice:
         BAUD_460800 = 460800
         BAUD_921600 = 921600
 
-    class RotaryEncoder:
+    class RotaryEncoder: # pylint: disable=too-few-public-methods # Reason: Class only contains enums to describe possible events
         """
         Events of Rotary Encoder available to listen
         """

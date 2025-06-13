@@ -11,7 +11,7 @@ MOUSEEVENTF_WHEEL = 0x0800
 MOUSEEVENTF_HWHEEL = 0x01000
 WHEEL_DELTA = 120
 
-class MOUSEINPUT(ctypes.Structure):
+class MOUSEINPUT(ctypes.Structure): # pylint: disable=too-few-public-methods # Reason: Appropriate amount of methods for ctypes container.
     """ Mouse input structures """
     _fields_ = [
         ("dx", ctypes.c_long),
@@ -22,20 +22,20 @@ class MOUSEINPUT(ctypes.Structure):
         ("dwExtraInfo", ctypes.POINTER(ctypes.c_ulong))
     ]
 
-class INPUT(ctypes.Structure):
+class INPUT(ctypes.Structure): # pylint: disable=too-few-public-methods # Reason: Appropriate amount of methods for ctypes container.
     """
     System structure receiving mouse events
     """
-    class _INPUT(ctypes.Union):
+    class _INPUT(ctypes.Union): # pylint: disable=too-few-public-methods # Reason: Appropriate amount of methods for ctypes container.
         _fields_ = [("mi", MOUSEINPUT)]
     _anonymous_ = ("_input",)
     _fields_ = [("type", ctypes.c_ulong), ("_input", _INPUT)]
 
 SendInput = ctypes.windll.user32.SendInput
 
-class AdaptiveTouchScroller:
+class AdaptiveTouchScroller: # pylint: disable=too-many-instance-attributes # Aknowledged
     """ Scroller performs commands to smooth mouse scroll """
-    def __init__(self, step_pixels=300, tick_rate_hz=120, base_decay_rate=0.5,
+    def __init__(self, step_pixels=300, tick_rate_hz=120, base_decay_rate=0.5, # pylint: disable=too-many-arguments,too-many-positional-arguments # Aknowledged
                  speed_min=1.0, speed_max=50.0, fps_min=5.0, fps_max=50.0):
         self.step_pixels = step_pixels
         self.tick_interval = 1.0 / tick_rate_hz

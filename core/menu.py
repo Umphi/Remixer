@@ -2,6 +2,7 @@
 Menu construction items
 """
 from collections import defaultdict
+from core.remixer_theme import RemixerTheme as Theme
 
 
 class MenuItem:
@@ -22,6 +23,13 @@ class MenuItem:
         """
         return MenuItem.all_items[name_]
 
+    @classmethod
+    def find_first_item_by_name(cls, name_):
+        """
+        Finds first menu item with specified name.
+        """
+        return MenuItem.all_items[name_][0]
+
 
 class Menu(MenuItem):
     """
@@ -41,7 +49,7 @@ class Menu(MenuItem):
         Adds MenuItem to submenu.
         """
         if self.items is None:
-            self.items = list()
+            self.items = []
         self.items.append(menuitem)
         for item in self.items:
             self.nameindex[item.name] = item
@@ -90,13 +98,40 @@ class AppVolume(MenuItem):
     """
     pids = defaultdict()
 
-    def __init__(self, name_, icon_ = None, session_ = None, filename_ = None, pid_ = -1):
+    def __init__(self, name_, icon_ = None, session_ = None):
         super().__init__(name_, icon_)
         self.session = session_
-        self.filename = filename_
-        self.pid = pid_
-        self.pids[name_] = pid_
+        if session_ is not None and session_.Process:
+            self.filename = session_.Process.name()
+            self.pid = session_.Process.pid
+            self.pids[name_] = session_.Process.pid
 
     @classmethod
     def get_pid_dict(cls):
+        """
+        Returns all available applications' PID
+        """
         return AppVolume.pids
+
+class ThemeItem(Button):
+    """
+    ThemeItem separates RemixerTheme object and Renderer
+    """
+    def __init__(self, theme: Theme, settings, menu_manager, icon_ = None):
+        super().__init__(theme.name, icon_, self.apply_theme)
+        self.theme = theme
+        self.settings = settings
+        self.menu_manager = menu_manager
+
+    def apply_theme(self):
+        """
+        Function called when ThemeItem pressed by user
+        """
+        self.settings.change_theme(self.theme)
+        self.menu_manager.menu_back()
+
+    def on_focus(self):
+        """
+        Function called when ThemeItem focused by user in Themes menu
+        """
+        self.settings.set_showing_theme(self.theme)

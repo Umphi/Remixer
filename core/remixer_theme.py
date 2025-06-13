@@ -1,3 +1,4 @@
+# pylint: disable=too-few-public-methods # Aknowledged
 """
 Theme processing
 """
@@ -5,7 +6,7 @@ import math
 from collections import defaultdict
 from PyQt6.QtGui import QColor
 
-class RemixerTheme():
+class RemixerTheme(): # pylint: disable=too-many-instance-attributes # Aknowledged
     """
     Represents theme
     """
@@ -110,7 +111,7 @@ class Color():
         self.b = color_b
         self.opacity = opacity
 
-    def to_QColor(self, opacity_mtp = 1): # pylint: disable=invalid-name
+    def to_QColor(self, opacity_mtp = 1): # pylint: disable=invalid-name # Reason: I think this is appropriate name
         """
         Returns color as QColor with specified opacity multiplier
         Parameters:
@@ -165,13 +166,13 @@ class VolumeArc():
         self.animation_speed = animation_speed
         self.ease_out_speed = ease_out_speed
 
-class CenterCircle():
+class CenterCircle(): # pylint: disable=too-many-arguments,too-many-positional-arguments # Aknowledged
     """
     Circle in the center of menu defifnitions
     """
     def __init__(self,
-                 outline = Color(),
-                 fill = Color(),
+                 outline,
+                 fill,
                  text_color = Color(),
                  volume_text_color = Color(),
                  size_mp = 1
