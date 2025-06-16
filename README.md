@@ -1,6 +1,6 @@
 # 🎧 Remixer
 
-[![Windows](./actions/workflows/windows-build.yml/badge.svg)](./actions/workflows/windows-build.yml)
+[![Windows](https://github.com/Umphi/Remixer/actions/workflows/windows-build.yml/badge.svg)](https://github.com/Umphi/Remixer/actions/workflows/windows-build.yml)
 
 **Remixer** is an application that extends keyboard volume key functionality with **per-application volume control**. It also supports custom control devices (e.g., rotary encoders).
 
