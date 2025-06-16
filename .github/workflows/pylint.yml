@@ -1,4 +1,4 @@
-name: Windows Build
+name: pylint
 
 on: [push, pull_request]
 
