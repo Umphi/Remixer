@@ -102,17 +102,6 @@ Pull requests are welcome but please open an issue first to discuss what you'd l
 
 ---
 
-## 🧪 Workflows
-
-Remixer uses [GitHub Actions](https://github.com/features/actions) to automatically:
-- check code formatting and linting
-- install dependencies
-- run tests (if any are added later)
-
-You can find the relevant workflow config [here](.github/workflows/python-app.yml).
-
----
-
 ## 📄 License
 
 This project is licensed under the **MIT License** — see the [LICENSE](./LICENSE) file for details.
