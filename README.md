@@ -1,5 +1,7 @@
 # 🎧 Remixer
 
+[![Windows](./actions/workflows/windows-build.yml/badge.svg)](./actions/workflows/windows-build.yml)
+
 **Remixer** is an application that extends keyboard volume key functionality with **per-application volume control**. It also supports custom control devices (e.g., rotary encoders).
 
 > 💡 **Inspired by** [deej](https://github.com/omriharel/deej) (check  this out, maybe that is what you are looking for)
@@ -52,7 +54,7 @@ cd remixer
 ```
 
 Or download manually:  
-[Download as ZIP](https://github.com/Umphi/remixer/archive/refs/heads/master.zip) and extract it.
+[Download as ZIP](https://github.com/Umphi/Remixer/archive/refs/heads/master.zip) and extract it.
 
 ##### 2. Install dependencies
 ```bash
