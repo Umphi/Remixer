@@ -10,9 +10,9 @@ import os
 import math
 import keyboard
 
-from PyQt6.QtWidgets import QApplication, QMainWindow, QMenu, QSystemTrayIcon
-from PyQt6.QtGui import QPainter, QIcon, QAction
-from PyQt6.QtCore import Qt, QTimer, QSize
+from PySide6.QtWidgets import QApplication, QMainWindow, QMenu, QSystemTrayIcon
+from PySide6.QtGui import QPainter, QIcon, QAction
+from PySide6.QtCore import Qt, QTimer, QSize, Signal, Slot
 
 from core.renderer import Renderer
 from core.menu import Menu, Button, AppVolume, ThemeItem
@@ -26,8 +26,14 @@ from modules.serial_port import SerialDevice
 
 class DrawingWindow(QMainWindow): # pylint: disable=too-many-instance-attributes   # Rework in progress
     """
-    DrawingWindow object of PyQt6 ... speaks for itself
+    Drawing Window of PySide6 ... speaks for itself
     """
+    start_inactivity_signal = Signal()
+    stop_inactivity_signal = Signal()
+    start_fade_signal = Signal()
+    stop_fade_signal = Signal()
+    close_application_signal = Signal()
+
     def __init__(self, app):
         super().__init__()
 
@@ -35,7 +41,12 @@ class DrawingWindow(QMainWindow): # pylint: disable=too-many-instance-attributes
 
         self.settings = SettingsManager(refresh_rate=self.refresh_rate)
 
-        callbacks = { "hide_menu": self.hide_menu }
+        self.close_application_signal.connect(sys.exit)
+
+        callbacks = { 
+                "hide_menu": self.hide_menu,
+                "close_app": self.close_application_signal.emit
+        }
 
         self.menu_manager = MenuManager(self.settings, callbacks=callbacks)
 
@@ -76,6 +87,21 @@ class DrawingWindow(QMainWindow): # pylint: disable=too-many-instance-attributes
         self.scroll_mode = False
         self.scroll_direction = "vertical"
 
+    @Slot()
+    def start_inactivity_timer(self):
+        self.inactivity_timer.start()
+
+    @Slot()
+    def stop_inactivity_timer(self):
+        self.inactivity_timer.stop()
+
+    @Slot()
+    def start_fade_timer(self):
+        self.fade_timer.start()
+
+    @Slot()
+    def stop_fade_timer(self):
+        self.fade_timer.stop()
 
     def init_ui(self):
         """
@@ -108,6 +134,11 @@ class DrawingWindow(QMainWindow): # pylint: disable=too-many-instance-attributes
         self.inactivity_timer = QTimer(self)
         self.inactivity_timer.setInterval(self.settings.get_selected_theme().fade_out_timeout)
         self.inactivity_timer.timeout.connect(self.hide_menu)
+
+        self.start_inactivity_signal.connect(self.start_inactivity_timer)
+        self.stop_inactivity_signal.connect(self.stop_inactivity_timer)
+        self.start_fade_signal.connect(self.start_fade_timer)
+        self.stop_fade_signal.connect(self.stop_fade_timer)
 
     def _updatescreen(self):
         """
@@ -153,16 +184,17 @@ class DrawingWindow(QMainWindow): # pylint: disable=too-many-instance-attributes
         Shows circular menu (application)
         """
         self.menu_manager.reload_menu()
+        self.settings.icon_manager.load_icons(AppVolume.get_pid_dict())
         self.menu_visible = True
         self.menu_manager.return_top_level_menu()
-        self.inactivity_timer.start()
+        self.start_inactivity_signal.emit()
 
     def hide_menu(self):
         """
         Starts opacity counter for smooth menu disappearing
         """
-        self.inactivity_timer.stop()
-        self.fade_timer.start()
+        self.stop_inactivity_signal.emit()
+        self.start_fade_signal.emit()
 
     def scroll(self, scroll_direction, _direction):
         """
@@ -211,17 +243,7 @@ class DrawingWindow(QMainWindow): # pylint: disable=too-many-instance-attributes
         self.last_volume_adjust_time = now
         return base_delta * self.volume_adjust_rate
 
-    def change_theme(self, theme):
-        """
-        Activates in settings.
-
-        Parameters:
-            Theme (Theme): Theme to activate.
-        """
-        self.settings.change_theme(theme)
-        self.inactivity_timer.setInterval(self.settings.get_selected_theme().fade_out_timeout)
-
-    def control_click_safe(self):
+    def control_click(self):
         """
         Mute button press handler (or volume knob press, or whatever custom control you use).
         Typical action in scroll mode: 
@@ -242,7 +264,7 @@ class DrawingWindow(QMainWindow): # pylint: disable=too-many-instance-attributes
             return
 
         focused = self.menu_manager.get_focus_item()
-        self.inactivity_timer.start()
+        self.start_inactivity_signal.emit()
 
         if self.renderer.active_option:
             self.renderer.set_active_option(None)
@@ -264,11 +286,7 @@ class DrawingWindow(QMainWindow): # pylint: disable=too-many-instance-attributes
                     isinstance(item, ThemeItem) and item.name == current_theme
             )
 
-        elif isinstance(focused, Theme):
-            self.change_theme(focused)
-            self.menu_manager.menu_back()
-
-    def control_up_safe(self):
+    def control_up(self):
         """
         Volume up button press handler (or volume knob turning clockwise, or whatever).
         Typical action in scroll mode: scrolls "clockwise"
@@ -281,13 +299,13 @@ class DrawingWindow(QMainWindow): # pylint: disable=too-many-instance-attributes
             keyboard.send(-175)
             return
 
-        self.inactivity_timer.start()
+        self.start_inactivity_signal.emit()
         if self.renderer.active_option is None:
             self.menu_manager.rotate(1)
         else:
             self.adjust_volume(self.renderer.active_option, self.get_volume_delta(0.01))
 
-    def control_down_safe(self):
+    def control_down(self):
         """
         Volume down button press handler (or volume knob turning counterclockwise, or whatever).
         Typical action in scroll mode: scrolls "anticlockwise"
@@ -300,61 +318,25 @@ class DrawingWindow(QMainWindow): # pylint: disable=too-many-instance-attributes
             keyboard.send(-174)
             return
 
-        self.inactivity_timer.start()
+        self.start_inactivity_signal.emit()
         if self.renderer.active_option is None:
             self.menu_manager.rotate(-1)
         else:
             self.adjust_volume(self.renderer.active_option, -self.get_volume_delta(0.01))
 
-    def control_double_click_safe(self):
+    def control_double_click(self):
         """
         Custom control double click handler.
         Still unused.
         """
         return
 
-    def control_hold_safe(self):
+    def control_hold(self):
         """
         Custom control double click handler (not implemented for keyboard controls yet).
         Changes application mode from default to scroll mode and vice versa. 
         """
         self.scroll_mode = not self.scroll_mode
-
-
-    def control_click(self):
-        """
-        Actual mute button press handler (or volume knob press, or whatever).
-        Due to the specifics of PyQt, control_click_safe cannot be called directly.
-        """
-        QTimer.singleShot(0, self.control_click_safe)
-
-    def control_up(self):
-        """
-        Actual volume up press handler (or volume knob turning clockwise, or whatever).
-        Due to the specifics of PyQt, control_up_safe cannot be called directly.
-        """
-        QTimer.singleShot(0, self.control_up_safe)
-
-    def control_down(self):
-        """
-        Actual volume down press handler (or volume knob turning counterclockwise, or whatever).
-        Due to the specifics of PyQt, control_down_safe cannot be called directly.
-        """
-        QTimer.singleShot(0, self.control_down_safe)
-
-    def control_double_click(self):
-        """
-        Actual custom control double click handler.
-        Due to the specifics of PyQt, control_double_click_safe cannot be called directly.
-        """
-        QTimer.singleShot(0, self.control_double_click_safe)
-
-    def control_hold(self):
-        """
-        Actual custom control double click handler (not implemented for keyboard controls yet).
-        Due to the specifics of PyQt, control_hold_safe cannot be called directly.
-        """
-        QTimer.singleShot(0, self.control_hold_safe)
 
 
 if __name__ == "__main__":
@@ -364,7 +346,7 @@ if __name__ == "__main__":
 
     with open('./settings.json', 'r', encoding='utf-8') as file_:
         settings_ = json.load(file_)
-        if "SerialCOM" in settings_ and "SerialBaud" in settings_:
+        """if "SerialCOM" in settings_ and "SerialBaud" in settings_:
             SerialDevice.set_com(
                                 settings_["SerialCOM"],
                                 SerialDevice.baud_from_int(settings_["SerialBaud"])
@@ -387,7 +369,7 @@ if __name__ == "__main__":
             SerialDevice.add_event(SerialDevice.RotaryEncoder.ButtonEvents.LONG_CLICK,
                                    window.control_hold
             )
-
+"""
     keyboard.add_hotkey(-175, window.control_up, suppress=True)
     keyboard.add_hotkey(-174, window.control_down, suppress=True)
     keyboard.add_hotkey(-173, window.control_click, suppress=True)

@@ -96,7 +96,7 @@ class AppVolume(MenuItem):
     MenuItem representing AppVolume object.
     Contains information about session to control volume.
     """
-    pids = defaultdict()
+    pids = defaultdict(list)
 
     def __init__(self, name_, icon_ = None, session_ = None):
         super().__init__(name_, icon_)
@@ -104,7 +104,7 @@ class AppVolume(MenuItem):
         if session_ is not None and session_.Process:
             self.filename = session_.Process.name()
             self.pid = session_.Process.pid
-            self.pids[name_] = session_.Process.pid
+            self.pids[icon_] = session_.Process.pid
 
     @classmethod
     def get_pid_dict(cls):

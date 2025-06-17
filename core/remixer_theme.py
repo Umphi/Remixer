@@ -4,7 +4,7 @@ Theme processing
 """
 import math
 from collections import defaultdict
-from PyQt6.QtGui import QColor
+from PySide6.QtGui import QColor
 
 class RemixerTheme(): # pylint: disable=too-many-instance-attributes # Aknowledged
     """

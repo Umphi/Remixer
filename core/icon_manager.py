@@ -6,7 +6,7 @@ import psutil
 import win32gui
 import win32ui
 from PIL import Image
-from PyQt6.QtGui import QPixmap
+from PySide6.QtGui import QPixmap
 from core.resource_loader import Loader
 
 class IconManager:

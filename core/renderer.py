@@ -3,8 +3,8 @@
 Application renderer
 """
 import math
-from PyQt6.QtCore import Qt, QPoint, QRectF
-from PyQt6.QtGui import QPen, QFont, QFontMetrics
+from PySide6.QtCore import Qt, QPoint, QRectF
+from PySide6.QtGui import QPen, QFont, QFontMetrics
 from core.menu import AppVolume, Placeholder
 from core.menu_manager import MenuObserver
 
@@ -78,7 +78,7 @@ class Renderer(MenuObserver):
         """
         Main draw function. Processes menu parameters and calls elements' drawing functions
         """
-        if len(self.menu) <= 0:
+        if self.menu is None or len(self.menu) <= 0:
             return
 
         center = QPoint(self.screen_size.width()//2, self.screen_size.height()//2)
@@ -413,7 +413,7 @@ class Renderer(MenuObserver):
         pen = QPen(
                     color.to_QColor(self.opacity_multiplier),
                     int(thickness),
-                    cap=Qt.PenCapStyle.FlatCap
+                    c=Qt.PenCapStyle.FlatCap
         )
         painter.setPen(pen)
         painter.drawArc(rect, int(start_angle), int(span_angle))

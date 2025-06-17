@@ -2,7 +2,7 @@ pillow
 pyserial
 pywin32
 pywin32-ctypes
-PyQt6
+PySide6
 pycaw
 psutil
 keyboard

@@ -106,7 +106,7 @@ class MenuManager:
                                                     ),
                                             Button("Confirm Exit",
                                                     "Exit", 
-                                                    sys.exit
+                                                    self.callbacks["close_app"]
                                                     )
                                         ]
                                     )

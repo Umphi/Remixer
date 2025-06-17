@@ -24,4 +24,4 @@ jobs:
 
     - name: Lint with pylint
       run: |
-        pylint $(git ls-files '*.py') --extension-pkg-whitelist=PyQt6,win32ui,win32gui
+        pylint $(git ls-files '*.py') --extension-pkg-whitelist=PySide6,win32ui,win32gui
