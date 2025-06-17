@@ -2,7 +2,6 @@
 Menu manager contains menu structure description and performs user commands.
 Also implements information observer
 """
-import sys
 from pycaw.pycaw import AudioUtilities
 from core.menu import Menu, Placeholder, Button, AppVolume, ThemeItem
 

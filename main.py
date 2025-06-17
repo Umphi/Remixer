@@ -16,12 +16,12 @@ from PySide6.QtCore import Qt, QTimer, QSize, Signal, Slot
 
 from core.renderer import Renderer
 from core.menu import Menu, Button, AppVolume, ThemeItem
-from core.remixer_theme import RemixerTheme as Theme
 from core.settings import SettingsManager
 from core.menu_manager import MenuManager
 from core.resource_loader import Loader
 from modules.scroller import AdaptiveTouchScroller as Scroller
-from modules.serial_port import SerialDevice
+from modules.serial_port import SerialDevice # pylint: disable=unused-import
+# Reason: Serial Device disabled due to high performance impact. Optimization needed.
 
 
 class DrawingWindow(QMainWindow): # pylint: disable=too-many-instance-attributes   # Rework in progress
@@ -43,7 +43,7 @@ class DrawingWindow(QMainWindow): # pylint: disable=too-many-instance-attributes
 
         self.close_application_signal.connect(sys.exit)
 
-        callbacks = { 
+        callbacks = {
                 "hide_menu": self.hide_menu,
                 "close_app": self.close_application_signal.emit
         }
@@ -89,24 +89,26 @@ class DrawingWindow(QMainWindow): # pylint: disable=too-many-instance-attributes
 
     @Slot()
     def start_inactivity_timer(self):
+        """ Safe inactivity timer starter """
         self.inactivity_timer.start()
 
     @Slot()
     def stop_inactivity_timer(self):
+        """ Safe inactivity timer stop """
         self.inactivity_timer.stop()
 
     @Slot()
     def start_fade_timer(self):
+        """ Safe fade timer starter """
         self.fade_timer.start()
 
     @Slot()
     def stop_fade_timer(self):
+        """ Safe fade timer stop """
         self.fade_timer.stop()
 
     def init_ui(self):
-        """
-        Initialize UI.
-        """
+        """ Initialize UI. """
         self.screen_size = QSize(330, 330)
         screen = self.screen_size
 
@@ -120,9 +122,7 @@ class DrawingWindow(QMainWindow): # pylint: disable=too-many-instance-attributes
         self.menu_manager.add_observer(self.renderer)
 
     def _init_timers(self):
-        """
-        Starts timer for UI refresh, inactivity timer and UI fade timer
-        """
+        """ Starts timer for UI refresh, inactivity timer and UI fade timer """
         self.fade_timer = QTimer(self)
         self.fade_timer.timeout.connect(self._fade_step)
         self.fade_timer.setInterval(math.floor(1000/self.refresh_rate))
@@ -141,16 +141,12 @@ class DrawingWindow(QMainWindow): # pylint: disable=too-many-instance-attributes
         self.stop_fade_signal.connect(self.stop_fade_timer)
 
     def _updatescreen(self):
-        """
-        Forces UI refresh
-        """
+        """ Forces UI refresh """
         if self.menu_visible:
             self.update()
 
     def paintEvent(self, event): # pylint: disable=unused-argument disable=invalid-name # Reason: Method provided by PyQt
-        """
-        Method handling drawing operation by PyQt
-        """
+        """ Method handling drawing operation by PySide. """
         if not self.menu_visible:
             return
 
@@ -163,9 +159,7 @@ class DrawingWindow(QMainWindow): # pylint: disable=too-many-instance-attributes
             self.renderer.draw(painter, theme)
 
     def _fade_step(self):
-        """
-        Counts opacity for smooth menu disappearing.
-        """
+        """ Counts opacity for smooth menu disappearing. """
         self.renderer.opacity_multiplier -= self.settings.theme.fade_out_speed
         if self.renderer.opacity_multiplier <= 0:
             self.fade_timer.stop()
@@ -180,9 +174,7 @@ class DrawingWindow(QMainWindow): # pylint: disable=too-many-instance-attributes
         self.update()
 
     def show_menu(self):
-        """
-        Shows circular menu (application)
-        """
+        """ Shows circular menu (application). """
         self.menu_manager.reload_menu()
         self.settings.icon_manager.load_icons(AppVolume.get_pid_dict())
         self.menu_visible = True
@@ -190,15 +182,13 @@ class DrawingWindow(QMainWindow): # pylint: disable=too-many-instance-attributes
         self.start_inactivity_signal.emit()
 
     def hide_menu(self):
-        """
-        Starts opacity counter for smooth menu disappearing
-        """
+        """ Starts opacity counter for smooth menu disappearing. """
         self.stop_inactivity_signal.emit()
         self.start_fade_signal.emit()
 
     def scroll(self, scroll_direction, _direction):
         """
-        Handles scroll action in scroll_mode (only with custom controls)
+        Handles scroll action in scroll_mode (only with custom controls).
 
         Parameters:
             scroll_direction (str): "horizontal" or "vertical" scrolling.
@@ -211,7 +201,7 @@ class DrawingWindow(QMainWindow): # pylint: disable=too-many-instance-attributes
 
     def adjust_volume(self, option, delta):
         """
-        Main function to change application volume
+        Main function to change application volume.
 
         Parameters:
             option (AppVolume): AppVolume(MenuItem) element in menu.
