@@ -24,9 +24,6 @@ SOFTWARE.
 
 This project includes and depends on the following third-party libraries and resources, each subject to their own licenses:
 
-
-
-
 - PySide6 (LGPL 3.0 License)
 - Pillow (PIL Software License)
 - pycaw (MIT License)
