@@ -4,7 +4,7 @@
 
 **Remixer** is an application that extends keyboard volume key functionality with **per-application volume control**. It also supports custom control devices (e.g., rotary encoders).
 
-> 💡 **Inspired by** [deej](https://github.com/omriharel/deej) (check  this out, maybe that is what you are looking for)
+> 💡 **Inspired by** [deej](https://github.com/omriharel/deej) (check this out, maybe that is what you are looking for)
 
 ---
 
@@ -106,7 +106,9 @@ Pull requests are welcome but please open an issue first to discuss what you'd l
 
 ## 📄 License
 
-This project is licensed under the **MIT License** — see the [LICENSE](./LICENSE) file for details.
+This project is licensed under the **MIT License** — see the [LICENSE](./LICENSE) and [THIRD-PARTY-LICENSES](./THIRD-PARTY-LICENSES.md) for details.
+
+Although MIT license permits nearly unrestricted use, I would appreciate it if you keep the source code of derivative projects open to support open source software development 🤝
 
 ---
 
