@@ -13,17 +13,20 @@ class SettingsManager: # pylint: disable=too-many-instance-attributes # Aknowled
     DEFAULT_SETTINGS_PATH = './settings.json'
     DEFAULT_THEMES_PATH = './themes.json'
 
-    def __init__(self, settings_path=None, themes_path=None, refresh_rate=60):
+    def __init__(self, settings_path=None, themes_path=None):
         self.settings_path = settings_path or self.DEFAULT_SETTINGS_PATH
         self.themes_path = themes_path or self.DEFAULT_THEMES_PATH
-        self.refresh_rate = refresh_rate
 
+        self.refresh_rate = 60
         self.aliases = {}
         self.ignored_apps = {}
         self.themes = []
         self.image_replacements = {}
         self.selected_theme = None
         self.theme = None
+
+        self.serial_com = ""
+        self.serial_baud = 0
 
         self._load_settings()
 
@@ -40,6 +43,11 @@ class SettingsManager: # pylint: disable=too-many-instance-attributes # Aknowled
                 self.aliases = settings["Aliases"]
                 self.ignored_apps = settings["IgnoreProcesses"]
                 self.image_replacements = settings["ImageReplacements"]
+                self.refresh_rate = settings["RefreshRate"]
+
+                if "SerialCOM" in settings and "SerialBaud" in settings:
+                    self.serial_com = settings["SerialCOM"]
+                    self.serial_baud = settings["SerialBaud"]
 
                 theme = settings["SelectedTheme"]
             with open('./themes.json', 'r', encoding='utf-8') as file:

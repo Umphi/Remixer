@@ -24,9 +24,8 @@ class Renderer(MenuObserver):
     active_option = None
     current_volume = 1
 
-    def __init__(self, screen_size, refresh_rate, settings):
+    def __init__(self, screen_size, settings):
         self.screen_size = screen_size
-        self.refresh_rate = refresh_rate
         self.settings = settings
 
     def on_focus_changed(self, index, last_turn):

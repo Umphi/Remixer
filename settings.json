@@ -14,6 +14,7 @@
     "ImageReplacements": {
         "AMPLibraryAgent.exe": "AppleMusic.exe"
     },
+    "RefreshRate": 165,
     "SelectedTheme": "MonoDark",
     "_SerialCOM": "COM4",
     "_SerialBaud": 115200

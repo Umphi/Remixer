@@ -35,17 +35,16 @@ SendInput = ctypes.windll.user32.SendInput
 
 class AdaptiveTouchScroller: # pylint: disable=too-many-instance-attributes # Aknowledged
     """ Scroller performs commands to smooth mouse scroll """
-    def __init__(self, step_pixels=300, tick_rate_hz=120, base_decay_rate=0.5, # pylint: disable=too-many-arguments,too-many-positional-arguments # Aknowledged
-                 speed_min=1.0, speed_max=50.0, fps_min=5.0, fps_max=50.0):
-        self.step_pixels = step_pixels
-        self.tick_interval = 1.0 / tick_rate_hz
-        self.base_decay_rate = base_decay_rate
+    def __init__(self, settings):
+        self.step_pixels = settings["step_pixels"]
+        self.tick_interval = 1.0 / settings["tick_rate_hz"]
+        self.base_decay_rate = settings["base_decay_rate"]
 
-        self.speed_min = speed_min
-        self.speed_max = speed_max
+        self.speed_min = settings["speed_min"]
+        self.speed_max = settings["speed_max"]
 
-        self.fps_min = fps_min
-        self.fps_max = fps_max
+        self.fps_min = settings["fps_min"]
+        self.fps_max = settings["fps_max"]
 
         self._lock = threading.Lock()
         self._accumulated_delta = 0.0            # vertical scroll
@@ -53,7 +52,7 @@ class AdaptiveTouchScroller: # pylint: disable=too-many-instance-attributes # Ak
         self._running = True
 
         self.last_event_time = None
-        self._speed_multiplier = speed_min
+        self._speed_multiplier = settings["speed_min"]
 
         self._thread = threading.Thread(target=self._scroll_loop, daemon=True)
         self._thread.start()
