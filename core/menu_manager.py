@@ -83,8 +83,8 @@ class MenuManager:
                             "Settings",
                             [
                                 Menu(
-                                    "Theme",
-                                    "Theme"
+                                    "Themes",
+                                    "Themes"
                                 ),
                                 Placeholder(
                                     "Credits",
@@ -120,7 +120,7 @@ class MenuManager:
                 menu.index("Menu").add_item(module.get_menu_item(self))
 
         for theme in self.settings.themes:
-            menu.index("Menu").index("Theme").add_item(
+            menu.index("Menu").index("Themes").add_item(
                                                     ThemeItem(theme,
                                                               self.settings,
                                                               self,
