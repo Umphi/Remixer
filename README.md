@@ -75,23 +75,30 @@ python main.py
 
 ```
 remixer/
-├── main.py               # Main script
-├── settings.json         # Configuration file
-├── themes.json           # Themes file
-├── requirements.txt      # Python dependencies
+├── main.py                  # Main script
+├── settings.json            # Configuration file
+├── themes.json              # Themes file
+├── requirements.txt         # Python dependencies
 ├── core/
-│   ├── menu.py           # Menu construction
-│   ├── remixer_theme.py  # Theme processing
-│   ├── renderer.py       # Application drawing
-│   ├── icon_manager.py   # Loading and providing icons
-│   └── settings.py       # Common application settings control
+│   ├── menu.py              # Menu elements
+│   ├── remixer_theme.py     # Theme processing
+│   ├── renderer.py          # Application drawing
+│   ├── icon_manager.py      # Loading and providing icons
+│   ├── settings.py          # Common application settings control
+│   ├── drawing_window.py    # Main window definition
+│   ├── input_handler.py     # Contains handlers for user inputs
+│   ├── menu_manager.py      # Contains menu structure description
+│   ├── resource_loader.py   # Loads resource files for pre-built Remixer
+│   ├── tray_controller.py   # Controls tray menu in taskbar
+│   └── ui_timers.py         # Contains timers for UI drawing
 ├── modules/
-│   ├── serial_port.py    # Operating with custom controllers
-│   └── scroller.py       # Smooth in-system scrolling (currently supports only custom controllers)
+│   ├── serial_port.py       # Operating with custom controllers
+│   ├── scroller.py          # Smooth in-system scrolling (currently supports only custom controllers)
+│   └── input_controllers.py # User controllers definitions
 ├── icons/
-│   └── internal/         # Internal icons for menu 
+│   └── internal/            # Internal icons for menu 
 │       └── ... 
-├── assets/               # Data for documentation
+├── assets/                  # Data for documentation
 │       └── ... 
 └── ...
 ```
