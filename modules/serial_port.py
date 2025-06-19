@@ -3,6 +3,7 @@ Class for working with custom controls, sending commands over serial interface
 """
 import threading
 from enum import Enum
+import time
 import serial
 
 
@@ -93,21 +94,21 @@ class SerialDevice:
     @classmethod
     def _initialize(cls):
         """Port initialization and thread start"""
-        if cls._instance is None:
-            with cls._lock:
-                if cls._instance is None:
-                    cls._instance = cls()
-                    try:
-                        cls._serial = serial.Serial(
-                                                    port=cls._port,
-                                                    baudrate=cls._baudrate,
-                                                    timeout=cls._timeout
-                        )
-                        cls._running = True
-                        cls._thread = threading.Thread(target=cls._read_loop, daemon=True)
-                        cls._thread.start()
-                    except serial.SerialException:
-                        cls._running = False
+        with cls._lock:
+            if cls._instance is not None:
+                return
+            cls._instance = cls()
+            try:
+                cls._serial = serial.Serial(
+                                            port=cls._port,
+                                            baudrate=cls._baudrate,
+                                            timeout=cls._timeout
+                )
+                cls._running = True
+                cls._thread = threading.Thread(target=cls._read_loop, daemon=True)
+                cls._thread.start()
+            except serial.SerialException:
+                cls._running = False
 
     @classmethod
     def add_event(cls, event_enum, callback):
@@ -138,6 +139,8 @@ class SerialDevice:
                     line = cls._serial.readline().decode(errors='ignore').strip()
                     if line:
                         cls._dispatch_event(line)
+                else:
+                    time.sleep(0.01)
             except serial.SerialException as e:
                 print(f"Port read error: {e}")
                 cls._running = False
