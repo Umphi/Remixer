@@ -10,3 +10,4 @@ AppIcon.png
 README.target.md
 modules/__pycache__/*
 core/__pycache__/*
+modules/menu/__pycache__/*

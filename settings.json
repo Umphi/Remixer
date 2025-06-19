@@ -17,5 +17,6 @@
     "RefreshRate": 165,
     "SelectedTheme": "MonoDark",
     "_SerialCOM": "COM4",
-    "_SerialBaud": 115200
+    "_SerialBaud": 115200,
+    "MenuModules": []
 }

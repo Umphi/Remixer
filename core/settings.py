@@ -28,6 +28,8 @@ class SettingsManager: # pylint: disable=too-many-instance-attributes # Aknowled
         self.serial_com = ""
         self.serial_baud = 0
 
+        self.menu_modules = []
+
         self._load_settings()
 
         self.icon_manager = IconManager(self, AppVolume.get_pid_dict())
@@ -44,6 +46,7 @@ class SettingsManager: # pylint: disable=too-many-instance-attributes # Aknowled
                 self.ignored_apps = settings["IgnoreProcesses"]
                 self.image_replacements = settings["ImageReplacements"]
                 self.refresh_rate = settings["RefreshRate"]
+                self.menu_modules = settings["MenuModules"]
 
                 if "SerialCOM" in settings and "SerialBaud" in settings:
                     self.serial_com = settings["SerialCOM"]

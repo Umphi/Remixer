@@ -135,3 +135,13 @@ class ThemeItem(Button):
         Function called when ThemeItem focused by user in Themes menu
         """
         self.settings.set_showing_theme(self.theme)
+
+class MenuModule:
+    """ Provides support for custom menu modules """
+    def is_enabled(self, _):
+        """ Checks if module enabled in settings """
+        return False
+
+    def get_menu_item(self, _):
+        """ Returns MenuItem """
+        raise NotImplementedError

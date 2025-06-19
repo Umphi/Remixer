@@ -23,6 +23,7 @@ class MenuManager:
     """
     Menu manager contains menu structure description and performs user commands.
     """
+    dynamic_modules = []
     def __init__(self, settings, callbacks: dict):
         self.current_menu = {}
         self.menu_stack = []
@@ -78,7 +79,7 @@ class MenuManager:
         """
 
         menu = Menu("Main", None, None)
-        menu.add_item(Menu("Settings",
+        menu.add_item(Menu("Menu",
                             "Settings",
                             [
                                 Menu(
@@ -86,36 +87,40 @@ class MenuManager:
                                     "Theme"
                                 ),
                                 Placeholder(
-                                            "Credits",
-                                            "Credits",
-                                            "Version: 1.0 Alpha\nRemixer\nby Umphi"
+                                    "Credits",
+                                    "Credits",
+                                    "Version: 1.0 Beta\nRemixer\nby Umphi"
                                 ),
                                 Button(
-                                        "Back",
-                                        "Back", 
-                                        self.menu_back
+                                    "Back",
+                                    "Back", 
+                                    self.menu_back
                                 ),
                                 Menu(
-                                        "Exit",
-                                        "Exit",
-                                        [
-                                            Button("Back",
-                                                    "Back",
-                                                    self.menu_back
-                                                    ),
-                                            Button("Confirm Exit",
-                                                    "Exit", 
-                                                    self.callbacks["close_app"]
-                                                    )
-                                        ]
-                                    )
-                                ]
+                                    "Exit",
+                                    "Exit",
+                                    [
+                                        Button("Back",
+                                                "Back",
+                                                self.menu_back
+                                                ),
+                                        Button("Confirm Exit",
+                                                "Exit", 
+                                                self.callbacks["close_app"]
+                                                )
+                                    ]
+                                )
+                            ]
                     )
         )
         menu.add_item(Button("Hide", "Close", self.callbacks["hide_menu"]))
 
+        for module in self.dynamic_modules:
+            if module.is_enabled(self.settings):
+                menu.index("Menu").add_item(module.get_menu_item(self))
+
         for theme in self.settings.themes:
-            menu.index("Settings").index("Theme").add_item(
+            menu.index("Menu").index("Theme").add_item(
                                                     ThemeItem(theme,
                                                               self.settings,
                                                               self,
