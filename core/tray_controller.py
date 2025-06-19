@@ -10,16 +10,22 @@ class TrayController:
     def __init__(self, parent, callbacks):
         self.tray_icon = QSystemTrayIcon(parent)
 
-        if os.path.exists("./icons/internal/AppIcon.png"):
-            self.tray_icon.setIcon(QIcon('./icons/internal/AppIcon.png'))
-        else:
-            self.tray_icon.setIcon(QIcon(Loader.resource_path('./icons/internal/AppIcon.png')))
+        self.load_tray_icon("./icons/internal/AppIcon.png")
 
-        self.tray_menu = QMenu()
-
-        self.quit_action = QAction("Exit", parent)
-        self.quit_action.triggered.connect(callbacks["close_app"])
-        self.tray_menu.addAction(self.quit_action)
-
-        self.tray_icon.setContextMenu(self.tray_menu)
+        self.tray_icon.setContextMenu(self.load_menu(parent, callbacks))
         self.tray_icon.show()
+
+    def load_tray_icon(self, path):
+        """ Loads tray icon """
+        if os.path.exists(path):
+            self.tray_icon.setIcon(QIcon(path))
+        else:
+            self.tray_icon.setIcon(QIcon(Loader.resource_path(path)))
+
+    def load_menu(self, parent, callbacks):
+        """ Creates menu """
+        menu = QMenu()
+        quit_action = QAction("Exit", parent)
+        quit_action.triggered.connect(callbacks["close_app"])
+        menu.addAction(quit_action)
+        return menu

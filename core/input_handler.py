@@ -9,7 +9,6 @@ class InputHandler():
     def __init__(self, parent):
         self.window = parent
         self.renderer = self.window.renderer
-        self.settings = self.window.settings
         self.menu_manager = self.window.menu_manager
 
         self.scroll_mode = False
@@ -55,7 +54,7 @@ class InputHandler():
             self.renderer.volume_animated = 1
         elif isinstance(focused, Menu):
             self.menu_manager.menu_enter(focused)
-            current_theme = self.settings.get_showing_theme().name
+            current_theme = self.window.settings.get_showing_theme().name
             self.menu_manager.set_focus_by_condition(
                 lambda item:
                     isinstance(item, ThemeItem) and item.name == current_theme
