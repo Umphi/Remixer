@@ -71,6 +71,24 @@ python main.py
 
 ---
 
+## 🎛️ How to use
+
+While the application window is hidden, your keyboard’s volume keys work as usual.
+To open the window, press the ```Mute``` key on your keyboard.
+
+Once the window appears:
+
+ - ```Volume Up``` and ```Volume Down``` let you navigate through the menu (clockwise and counterclockwise).
+
+ - ```Mute``` acts as the Enter key to select an item.
+
+To hide the application, you can either press the corresponding "Hide" button in the main menu or simply wait a few seconds — the window will close automatically based on your theme settings.
+
+This method of control works best with custom control devices, or when the volume adjustment on your keyboard is done using a rotary knob.
+
+
+---
+
 ## 📁 Project Structure
 
 ```
