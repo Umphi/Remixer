@@ -20,7 +20,7 @@ class Loader: # pylint: disable=too-few-public-methods # Aknowledged
             relative_path (str): Path to resource.
         """
         try:
-            base_path = sys._MEIPASS   # pylint: disable=protected-access disable=no-member   # Reason: Used to load resources in pre-built version of Remixer
+            base_path = sys._MEIPASS   # pylint: disable=protected-access,no-member   # Reason: Used to load resources in pre-built version of Remixer
         except Exception:              # pylint: disable=broad-exception-caught               # Reason: Intercepts any errors, no action required
             base_path = os.path.abspath(".")
         relative_path = relative_path.replace("./", "").replace("/","\\")
