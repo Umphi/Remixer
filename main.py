@@ -1,6 +1,5 @@
 """
-Main application module of Remixer. 
-It is little bit of a chaos there right now. Working on it.
+Main.py of Remixer. 
 """
 
 import sys
