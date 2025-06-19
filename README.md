@@ -40,8 +40,8 @@ python --version
 ### 📦 Installation
 
 #### Option 1: Download prebuilt binary (recommended for users)
-You can download the ready-to-run version of **Remixer** from the Relea...  
-Actually, this option will be available ASAP 😅
+You can download the ready-to-run version of **Remixer** from the [Releases section](https://github.com/Umphi/remixer/releases).  
+Just download the latest `.zip` or `.exe`, unpack it, and run!
 
 ---
 
@@ -121,7 +121,7 @@ Although MIT license permits nearly unrestricted use, I would appreciate it if y
 
 ## 🌐 Links
 
-- [deej by omriharel](https://github.com/omriharel/deej) — Inspiration
+- [deej by omriharel](https://github.com/omriharel/deej)
 - [Python Downloads](https://www.python.org/downloads/)
 
 ---
