@@ -14,10 +14,8 @@ from core.menu_manager import MenuManager
 from core.tray_controller import TrayController
 from core.input_handler import InputHandler
 
-from modules.scroller import AdaptiveTouchScroller as Scroller
 
-
-class DrawingWindow(QMainWindow): # pylint: disable=too-many-instance-attributes   # Rework in progress
+class DrawingWindow(QMainWindow):
     """
     Drawing Window of PySide6 ... speaks for itself
     """
@@ -32,44 +30,29 @@ class DrawingWindow(QMainWindow): # pylint: disable=too-many-instance-attributes
 
         self.settings = settings
 
-        self.close_application_signal.connect(sys.exit)
-
         callbacks = {
                 "hide_menu": self.hide_menu,
                 "close_app": self.close_application_signal.emit
         }
 
+        self.close_application_signal.connect(sys.exit)
+
+        screen = self._init_ui()
+
         self.menu_manager = MenuManager(self.settings, callbacks=callbacks)
         self.tray = TrayController(self, callbacks)
-
-        self.renderer = None
-
-        self._init_ui()
-        self._init_timers()
-
-        scroller_settings = {
-            "step_pixels": 300,
-            "tick_rate_hz": self.settings.refresh_rate,
-            "base_decay_rate": 0.5,
-            "speed_min": 1.0,
-            "speed_max": 50.0,
-            "fps_min": 7.5,
-            "fps_max": 50.0
-        }
-
-        self.scroller = Scroller(scroller_settings)
-
+        self.renderer = Renderer(screen, self.settings)
         self.input = InputHandler(self)
+
+        self.menu_manager.add_observer(self.renderer)
+
+        self._init_timers()
 
         self.menu_visible = False
 
-        self.scroll_mode = False
-        self.scroll_direction = "vertical"
-
     def _init_ui(self):
         """ Initialize UI. """
-        self.screen_size = QSize(330, 330)
-        screen = self.screen_size
+        screen = QSize(330, 330)
 
         self.setGeometry(30, 1025, screen.width(), screen.height())
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
@@ -77,8 +60,7 @@ class DrawingWindow(QMainWindow): # pylint: disable=too-many-instance-attributes
         self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint)
         self.setWindowFlag(Qt.WindowType.Tool)
 
-        self.renderer = Renderer(screen, self.settings)
-        self.menu_manager.add_observer(self.renderer)
+        return screen
 
     def _init_timers(self):
         """ Starts timer for UI refresh, inactivity timer and UI fade timer """
@@ -91,12 +73,12 @@ class DrawingWindow(QMainWindow): # pylint: disable=too-many-instance-attributes
 
     def _fade_step(self):
         """ Counts opacity for smooth menu disappearing. """
-        self.renderer.opacity_multiplier -= self.settings.theme.fade_out_speed
-        if self.renderer.opacity_multiplier <= 0:
+        self.renderer.render_state.opacity_multiplier -= self.settings.theme.fade_out_speed
+        if self.renderer.render_state.opacity_multiplier <= 0:
             self.timers.stop_fade()
             self.menu_visible = False
             self.renderer.set_active_option(None)
-            self.renderer.opacity_multiplier = 1
+            self.renderer.render_state.opacity_multiplier = 1
 
             self.settings.theme = self.settings.get_selected_theme()
 
@@ -109,7 +91,7 @@ class DrawingWindow(QMainWindow): # pylint: disable=too-many-instance-attributes
         if self.menu_visible:
             self.update()
 
-    def paintEvent(self, event): # pylint: disable=unused-argument disable=invalid-name # Reason: Method provided by PySide
+    def paintEvent(self, _):
         """ Method handling drawing operation by PySide. """
         if not self.menu_visible:
             return

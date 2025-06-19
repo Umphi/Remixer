@@ -3,6 +3,7 @@ import time
 
 import keyboard
 from core.menu import ThemeItem, AppVolume, Button, Menu
+from modules.scroller import AdaptiveTouchScroller as Scroller
 
 class InputHandler():
     """ Handles input commands from user """
@@ -11,11 +12,22 @@ class InputHandler():
         self.renderer = self.window.renderer
         self.menu_manager = self.window.menu_manager
 
-        self.scroll_mode = False
-        self.scroll_direction = "vertical"
+        self.scroll_direction = None
 
         self.last_volume_adjust_time = 0
         self.volume_adjust_rate = 1
+
+        scroller_settings = {
+            "step_pixels": 300,
+            "tick_rate_hz": self.window.settings.refresh_rate,
+            "base_decay_rate": 0.5,
+            "speed_min": 1.0,
+            "speed_max": 50.0,
+            "fps_min": 7.5,
+            "fps_max": 50.0
+        }
+
+        self.scroller = Scroller(scroller_settings)
 
     def control_click(self):
         """
@@ -26,11 +38,12 @@ class InputHandler():
             shows menu if hidden,
             performs Menu Items' actions if menu shown
         """
-        if self.scroll_mode:
-            if self.scroll_direction == "horizontal":
-                self.scroll_direction = "vertical"
-            else:
-                self.scroll_direction = "horizontal"
+        if self.scroll_direction == "horizontal":
+            self.scroll_direction = "vertical"
+            return
+
+        if self.scroll_direction == "vertical":
+            self.scroll_direction = "horizontal"
             return
 
         if not self.window.menu_visible:
@@ -66,7 +79,7 @@ class InputHandler():
         Typical action in scroll mode: scrolls "clockwise"
         Typical action in default mode: controls user pointer, moving it clockwise
         """
-        if self.scroll_mode:
+        if self.scroll_direction is not None:
             self.scroll(self.scroll_direction, "clockwise")
             return
         if not self.window.menu_visible:
@@ -85,7 +98,7 @@ class InputHandler():
         Typical action in scroll mode: scrolls "anticlockwise"
         Typical action in default mode: controls user pointer, moving it counterclockwise
         """
-        if self.scroll_mode:
+        if self.scroll_direction is not None:
             self.scroll(self.scroll_direction, "anticlockwise")
             return
         if not self.window.menu_visible:
@@ -110,7 +123,10 @@ class InputHandler():
         Custom control double click handler (not implemented for keyboard controls yet).
         Changes application mode from default to scroll mode and vice versa. 
         """
-        self.scroll_mode = not self.scroll_mode
+        if self.scroll_direction is not None:
+            self.scroll_direction = None
+        else:
+            self.scroll_direction = "vertical"
 
     def adjust_volume(self, option, delta):
         """
@@ -148,13 +164,13 @@ class InputHandler():
 
     def scroll(self, scroll_direction, _direction):
         """
-        Handles scroll action in scroll_mode (only with custom controls).
+        Handles scroll action (only with custom controls).
 
         Parameters:
             scroll_direction (str): "horizontal" or "vertical" scrolling.
             _direction (str): "clockwise" or "anticlockwise".
         """
         if scroll_direction == "horizontal":
-            self.window.scroller.scroll_pixels_horizontal(10 if _direction == "clockwise" else -10)
-        else:
-            self.window.scroller.scroll_pixels(10 if _direction == "clockwise" else -10)
+            self.scroller.scroll_pixels_horizontal(10 if _direction == "clockwise" else -10)
+        elif scroll_direction == "vertical":
+            self.scroller.scroll_pixels(10 if _direction == "clockwise" else -10)

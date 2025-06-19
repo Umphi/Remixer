@@ -1,25 +1,31 @@
-# pylint: disable=too-many-locals,too-many-instance-attributes,too-many-arguments,too-many-positional-arguments,too-many-branches # WIP
+# pylint: disable=too-many-locals,too-many-arguments,too-many-positional-arguments,too-many-branches # WIP
 """
 Application renderer
 """
+from dataclasses import dataclass
 import math
 from PySide6.QtCore import Qt, QPoint, QRectF
 from PySide6.QtGui import QPen, QFont, QFontMetrics
 from core.menu import AppVolume, Placeholder
 from core.menu_manager import MenuObserver
 
+@dataclass
+class RenderState:
+    """ Render state """
+    focus_pie_angle: float = 0
+    focus_pie_target: float = 0
+    focus_pie_span: float = 0
+    focus_pie_target_span: float = 0
+    volume_animated: float = 1
+    opacity_multiplier: float = 1
+
 class Renderer(MenuObserver):
     """
     Class that draws application
     """
-    focus_pie_angle = 0
-    focus_pie_target = 0
-    focus_pie_span = 0
-    focus_pie_target_span = 0
+    render_state = RenderState()
     last_turn = None
-    volume_animated = 1
     focused_index = 0
-    opacity_multiplier = 1
     menu = None
     active_option = None
     current_volume = 1
@@ -53,12 +59,12 @@ class Renderer(MenuObserver):
         angle = 360 / len(self.menu)
         start_angle = (self.focused_index * angle - 90) * 16
         span_angle = angle * 16
-        self.focus_pie_target = int((start_angle+span_angle/2)/16)
+        self.render_state.focus_pie_target = int((start_angle+span_angle/2)/16)
 
-        if self.focus_pie_target < 0:
-            self.focus_pie_target = 360 + self.focus_pie_target
+        if self.render_state.focus_pie_target < 0:
+            self.render_state.focus_pie_target = 360 + self.render_state.focus_pie_target
         if set_current:
-            self.focus_pie_angle = self.focus_pie_target
+            self.render_state.focus_pie_angle = self.render_state.focus_pie_target
 
     def set_active_option(self, option):
         """
@@ -84,7 +90,7 @@ class Renderer(MenuObserver):
         radius = 150
         sectors = len(self.menu)
 
-        focus_angle_1 = (self.focus_pie_target-self.focus_pie_angle)%360
+        focus_angle_1 = (self.render_state.focus_pie_target-self.render_state.focus_pie_angle)%360
 
         distance_between_angles = 360 - focus_angle_1 if focus_angle_1 > 180 else focus_angle_1
 
@@ -103,44 +109,49 @@ class Renderer(MenuObserver):
             if self.last_turn is None:
                 if focus_angle_1 > 180:
                     speed = (speed if (360 - focus_angle_1) > speed else 360-focus_angle_1)
-                    self.focus_pie_angle -= speed
+                    self.render_state.focus_pie_angle -= speed
                 elif focus_angle_1 <= 180:
                     speed = (speed if focus_angle_1 > speed else focus_angle_1)
-                    self.focus_pie_angle += speed
+                    self.render_state.focus_pie_angle += speed
             else:
                 if focus_angle_1 <= speed:
-                    self.focus_pie_angle = self.focus_pie_target
+                    self.render_state.focus_pie_angle = self.render_state.focus_pie_target
                 else:
                     if self.last_turn == "right":
-                        self.focus_pie_angle -= speed
+                        self.render_state.focus_pie_angle -= speed
                     elif self.last_turn == "left":
-                        self.focus_pie_angle += speed
-            if self.focus_pie_angle >= 360:
-                self.focus_pie_angle -= 360
-            if self.focus_pie_angle < 0:
-                self.focus_pie_angle = 360 + self.focus_pie_angle
+                        self.render_state.focus_pie_angle += speed
+            if self.render_state.focus_pie_angle >= 360:
+                self.render_state.focus_pie_angle -= 360
+            if self.render_state.focus_pie_angle < 0:
+                self.render_state.focus_pie_angle = 360 + self.render_state.focus_pie_angle
 
-        span_difference = math.fabs(self.focus_pie_span-self.focus_pie_target_span)
+        span_difference = math.fabs(
+                        self.render_state.focus_pie_span - self.render_state.focus_pie_target_span
+        )
         ease_out_mp = 1/((min(span_difference/16,25)/25)*(theme.volume_arc.ease_out_speed*0.2-1)+1)
         span_changing = 16*theme.volume_arc.animation_speed*speed_multiplier*ease_out_mp
 
         if span_difference > span_changing:
             span_changing_speed = span_changing
         else:
-            span_changing_speed = math.fabs(self.focus_pie_span-self.focus_pie_target_span)
+            span_changing_speed = span_difference
 
         if focus_angle_1 != 0 and speed * 2 > span_changing_speed:
             span_changing_speed = speed * 2
 
-        if self.focus_pie_span < self.focus_pie_target_span:
-            self.focus_pie_span += span_changing_speed
-        elif self.focus_pie_span > self.focus_pie_target_span:
-            self.focus_pie_span -= span_changing_speed
+        if self.render_state.focus_pie_span < self.render_state.focus_pie_target_span:
+            self.render_state.focus_pie_span += span_changing_speed
+        elif self.render_state.focus_pie_span > self.render_state.focus_pie_target_span:
+            self.render_state.focus_pie_span -= span_changing_speed
 
         for i, label in enumerate(self.menu):
             self.draw_sector(painter, theme, center, radius, sectors, i)
 
-        self.draw_focus(painter, theme, center, radius, sectors, self.focus_pie_angle, speed)
+        self.draw_focus(
+                    painter, theme, center, radius, sectors,
+                    self.render_state.focus_pie_angle, speed
+        )
 
         for i, label in enumerate(self.menu):
             self.draw_all_icons(painter, theme, center, radius, sectors, i, label)
@@ -164,8 +175,8 @@ class Renderer(MenuObserver):
         start_angle = (i * angle - 90) * 16
         span_angle = angle * 16
 
-        brush_color = theme.sector.fill.to_QColor(self.opacity_multiplier)
-        pen_color = theme.sector.outline.to_QColor(self.opacity_multiplier)
+        brush_color = theme.sector.fill.to_QColor(self.render_state.opacity_multiplier)
+        pen_color = theme.sector.outline.to_QColor(self.render_state.opacity_multiplier)
 
         painter.setPen(pen_color)
         painter.setBrush(brush_color)
@@ -193,12 +204,12 @@ class Renderer(MenuObserver):
         """
         angle = 360 / sectors
         span_angle = angle * 16
-        start_angle = f_angle*16 - 0.5*self.focus_pie_span
+        start_angle = f_angle*16 - 0.5*self.render_state.focus_pie_span
 
-        brush_color = theme.focused_sector.fill.to_QColor(self.opacity_multiplier)
-        pen_color = theme.focused_sector.outline.to_QColor(self.opacity_multiplier)
+        brush_color = theme.focused_sector.fill.to_QColor(self.render_state.opacity_multiplier)
+        pen_color = theme.focused_sector.outline.to_QColor(self.render_state.opacity_multiplier)
         if speed > 2:
-            pen_color = theme.focused_sector.fill.to_QColor(self.opacity_multiplier)
+            pen_color = theme.focused_sector.fill.to_QColor(self.render_state.opacity_multiplier)
 
         painter.setPen(pen_color)
         painter.setBrush(brush_color)
@@ -206,7 +217,7 @@ class Renderer(MenuObserver):
         draw_radius = radius * 1.1
         draw_size = int(draw_radius * 2)
 
-        self.focus_pie_target_span = span_angle
+        self.render_state.focus_pie_target_span = span_angle
 
         painter.drawPie(
                         int(center.x() - draw_radius),
@@ -214,7 +225,7 @@ class Renderer(MenuObserver):
                         draw_size,
                         draw_size,
                         int(start_angle),
-                        int(self.focus_pie_span)
+                        int(self.render_state.focus_pie_span)
         )
 
         label = self.menu[self.focused_index]
@@ -243,7 +254,7 @@ class Renderer(MenuObserver):
             label (MenuItem): Menu Item with specified parameters of drawing.
         """
         current_angle = i * 360 / sectors - 90 + (360 / sectors) / 2
-        focused_angle = self.focus_pie_angle
+        focused_angle = self.render_state.focus_pie_angle
 
         max_icon_multiplier = theme.icons.max_scaling
         min_icon_multiplier = theme.icons.min_scaling
@@ -284,7 +295,7 @@ class Renderer(MenuObserver):
         angle_rad = math.radians(i * 360 / sectors - 90 + (360 / sectors) / 2)
         x = center.x() + math.cos(angle_rad) * (radius * 0.7) - icon_size // 2
         y = center.y() - math.sin(angle_rad) * (radius * 0.7) - icon_size // 2
-        painter.setOpacity(self.opacity_multiplier)
+        painter.setOpacity(self.render_state.opacity_multiplier)
         painter.drawPixmap(int(x), int(y), icon_size, icon_size, icon)
 
     def draw_volume_arc(self, painter, theme, center, radius,
@@ -317,15 +328,14 @@ class Renderer(MenuObserver):
         )
 
         full_angle = 360 - 360 / sectors
-        animated_span = full_angle * self.volume_animated
-        span_diff = self.focus_pie_span - span_angle
-        animated_start = int(start_angle + self.focus_pie_span + (full_angle - animated_span) * 16)
+        animated_span = full_angle * self.render_state.volume_animated
+        span_diff = self.render_state.focus_pie_span - span_angle
 
         self.draw_arc(
             painter, arc_rect,
             theme.volume_arc.background,
             radius * 0.1,
-            int(start_angle + self.focus_pie_span),
+            int(start_angle + self.render_state.focus_pie_span),
             int(full_angle * 16 - span_diff)
         )
 
@@ -333,7 +343,7 @@ class Renderer(MenuObserver):
             painter, arc_rect,
             theme.volume_arc.foreground,
             radius * 0.1,
-            animated_start,
+            int(start_angle+self.render_state.focus_pie_span+(full_angle-animated_span)*16),
             int(animated_span * 16 - span_diff)
         )
 
@@ -360,8 +370,8 @@ class Renderer(MenuObserver):
         fm = QFontMetrics(font)
         ha = fm.horizontalAdvance(text)
 
-        painter.setBrush(theme.center_circle.fill.to_QColor(self.opacity_multiplier))
-        painter.setPen(theme.center_circle.outline.to_QColor(self.opacity_multiplier))
+        painter.setBrush(theme.center_circle.fill.to_QColor(self.render_state.opacity_multiplier))
+        painter.setPen(theme.center_circle.outline.to_QColor(self.render_state.opacity_multiplier))
         center_size = int(theme.center_circle.size_multiplier * 120)
         painter.drawEllipse(
                             center.x() - center_size//2,
@@ -371,7 +381,11 @@ class Renderer(MenuObserver):
         )
 
         painter.setFont(font)
-        painter.setPen(theme.center_circle.text_color.to_QColor(self.opacity_multiplier))
+        painter.setPen(
+                        theme.center_circle.text_color.to_QColor(
+                                                    self.render_state.opacity_multiplier
+                        )
+        )
 
         if isinstance(label, Placeholder):
             text = label.text
@@ -402,7 +416,10 @@ class Renderer(MenuObserver):
             volume = "Mute"
 
         hav = fm.horizontalAdvance(volume)
-        painter.setPen(theme.center_circle.volume_text_color.to_QColor(self.opacity_multiplier))
+        painter.setPen(theme.center_circle.volume_text_color.to_QColor(
+                                                    self.render_state.opacity_multiplier
+                        )
+        )
         painter.drawText(center.x() - hav // 2, center.y() + 35, volume)
 
     def draw_arc(self, painter, rect, color, thickness, start_angle, span_angle):
@@ -410,7 +427,7 @@ class Renderer(MenuObserver):
         Draws volume and background arcs with given parameters
         """
         pen = QPen(
-                    color.to_QColor(self.opacity_multiplier),
+                    color.to_QColor(self.render_state.opacity_multiplier),
                     int(thickness),
                     c=Qt.PenCapStyle.FlatCap
         )
@@ -433,17 +450,23 @@ class Renderer(MenuObserver):
         vol_delta = 0.01 * theme.volume_arc.animation_speed
 
         if self.active_option:
-            volume_difference = math.fabs(self.volume_animated - self.current_volume)
+            volume_difference = math.fabs(self.render_state.volume_animated - self.current_volume)
             vol_delta *= self.compute_ease_out_multiplier(
                                                             volume_difference,
                                                             0.3,
                                                             theme.volume_arc.ease_out_speed
             )
 
-        if self.volume_animated < self.current_volume:
-            self.volume_animated = min(self.current_volume, self.volume_animated+vol_delta)
-        elif self.volume_animated > self.current_volume:
-            self.volume_animated = max(self.current_volume, self.volume_animated-vol_delta)
+        if self.render_state.volume_animated < self.current_volume:
+            self.render_state.volume_animated = min(
+                                            self.current_volume,
+                                            self.render_state.volume_animated+vol_delta
+            )
+        elif self.render_state.volume_animated > self.current_volume:
+            self.render_state.volume_animated = max(
+                                            self.current_volume,
+                                            self.render_state.volume_animated-vol_delta
+            )
 
     @staticmethod
     def compute_ease_out_multiplier(diff, threshold, speed):
